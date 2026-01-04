@@ -1,0 +1,11 @@
+{
+  "name": "Ami Tracker",
+  "version": "0.0.1",
+  "author": "Mayuna",
+  "mainClass": "enterprises.iwakura.amitracker.AmiTracker",
+  "configClass": "enterprises.iwakura.amitracker.AmiTrackerConfig",
+  "sigewineRequired": true,
+  "exceptionHandlingPackages": [
+    "enterprises.iwakura.amitracker"
+  ]
+}

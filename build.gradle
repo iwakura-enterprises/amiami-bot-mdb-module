@@ -1,0 +1,162 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id "io.sentry.jvm.gradle" version "5.6.0"
+    id 'enterprises.iwakura.amber' version '1.0.0'
+}
+
+group = 'enterprises.iwakura'
+version = '0.0.1'
+
+repositories {
+    mavenCentral()
+
+    maven { url "https://m2.chew.pro/releases" }
+    maven { url "https://m2.chew.pro/snapshots" }
+
+    maven {
+        name 'm2-dv8tion'
+        url 'https://m2.dv8tion.net/releases'
+    }
+
+    maven { url "https://s01.oss.sonatype.org/content/repositories/releases" }
+}
+
+configurations.all {
+    exclude group: 'io.sentry', module: 'sentry-android-okhttp'
+}
+
+dependencies {
+    // JDA
+    compileOnly 'net.dv8tion:JDA:6.2.0'
+
+    // Chewtils
+    compileOnly 'pw.chew:jda-chewtils:2.1'
+
+    // Sentry
+    amber 'io.sentry:sentry-log4j2:8.13.3'
+
+    // Guava
+    amber 'com.google.guava:guava:33.5.0-jre'
+
+    // SLF4J
+    compileOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.23.1'
+    compileOnly 'org.apache.logging.log4j:log4j-api:2.23.1'
+    compileOnly 'org.apache.logging.log4j:log4j-core:2.23.1'
+
+    // Personal libraries
+    compileOnly 'enterprises.iwakura:modular-discord-bot:3.5.1'
+    compileOnly 'enterprises.iwakura:jda-interactables:2.2.0'
+    amber 'enterprises.iwakura:irminsul:0.2.2'
+    compileOnly 'dev.mayuna:mayus-library:3.1'
+    compileOnly 'dev.mayuna:mayus-json-utilities:2.1'
+    compileOnly 'enterprises.iwakura:ganyu:1.1.1'
+    compileOnly 'enterprises.iwakura:sigewine-core:2.4.0'
+    compileOnly 'enterprises.iwakura:keqing-core:1.1.1'
+    compileOnly 'enterprises.iwakura:keqing-snakeyaml:1.1.1'
+    compileOnly 'enterprises.iwakura:jean-core:1.1.1'
+    compileOnly 'enterprises.iwakura:jean-gson:1.1.1'
+
+    amber "enterprises.iwakura:amiami-api-kirara:1.2.0"
+    amber "enterprises.iwakura:kirara-httpclient:1.4.1"
+    amber "enterprises.iwakura:kirara-core:1.4.1"
+    amber "enterprises.iwakura:kirara-gson:1.4.1"
+
+    // Database - Hibernate, SQLite, MySQL, PostgreSQL
+    amber 'org.postgresql:postgresql:42.7.6'
+    compileOnly platform("org.hibernate.orm:hibernate-platform:7.0.0.CR1")
+    amber "org.hibernate.orm:hibernate-core"
+    amber 'org.hibernate.orm:hibernate-processor:7.0.0.CR1'
+    annotationProcessor 'org.hibernate.orm:hibernate-processor:7.0.0.CR1'
+    amber "org.hibernate.orm:hibernate-hikaricp"
+    amber "jakarta.transaction:jakarta.transaction-api"
+    amber 'com.fasterxml.jackson.core:jackson-databind:2.15.3'
+    amber 'org.xerial:sqlite-jdbc:3.46.0.0'
+    amber 'com.mysql:mysql-connector-j:9.4.0'
+    amber 'org.liquibase:liquibase-core:5.0.1'
+    amber 'com.mattbertolini:liquibase-slf4j:5.1.0'
+
+    // HikariCP
+    amber 'com.zaxxer:HikariCP:5.1.0'
+
+    // GSON
+    compileOnly 'com.google.code.gson:gson:2.11.0'
+
+    // For @Bean annotation IDEA support
+    compileOnly 'org.springframework:spring-context:7.0.2'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.+'
+    annotationProcessor 'org.projectlombok:lombok:1.18.+'
+
+    // JUnit
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+}
+
+
+test {
+    useJUnitPlatform()
+}
+
+// UTF-8
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+task publishCloseAndRelease() {
+    dependsOn 'cleanBuildMedivhMavenRepo'
+    dependsOn 'uploadToSonatype'
+    dependsOn 'publishDeployment'
+}
+
+shadowJar {
+    archiveFileName = 'ami-tracker.jar'
+}
+
+
+tasks.register('copyJarToModules') {
+    var jarFile = "${buildDir}/libs/ami-tracker.jar"
+    var destDir = "C:\\core\\coding\\personal\\ModularDiscordBot\\build\\libs\\modules"
+    doLast {
+        copy {
+            from jarFile
+            into destDir
+        }
+    }
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier.set('javadoc')
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    archiveClassifier.set('sources')
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile) {
+    options.release = 21
+}
+
+def generatedSrcDir = "${buildDir}/generated-src/main/java"
+
+// Include generated sources in compilation
+sourceSets {
+    main {
+        java {
+            srcDir generatedSrcDir
+        }
+    }
+}

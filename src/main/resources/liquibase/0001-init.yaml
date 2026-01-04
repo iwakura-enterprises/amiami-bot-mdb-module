@@ -1,0 +1,534 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0001-init-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_bought_product
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: priceJpy
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: product_id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: user_id
+                  type: BIGINT
+            tableName: bought_product
+  - changeSet:
+      id: 0001-init-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_channel
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: updatedAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: guild_id
+                  type: BIGINT
+            tableName: channel
+  - changeSet:
+      id: 0001-init-3
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_channel_product_list_query
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: updatedAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: priceDiscountEnabled
+                  type: BOOLEAN
+              - column:
+                  constraints:
+                    nullable: false
+                  name: stockChangeEnabled
+                  type: BOOLEAN
+              - column:
+                  constraints:
+                    nullable: false
+                  name: newProductsEnabled
+                  type: BOOLEAN
+              - column:
+                  constraints:
+                    nullable: false
+                  name: roleIdsToNotify
+                  type: bigint[]
+              - column:
+                  constraints:
+                    nullable: false
+                  name: channel_id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: productListQuery_id
+                  type: BIGINT
+            tableName: channel_product_list_query
+  - changeSet:
+      id: 0001-init-4
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_guild
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: updatedAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+            tableName: guild
+  - changeSet:
+      id: 0001-init-5
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_product
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: updatedAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: code
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  name: imageUrl
+                  type: VARCHAR(255)
+              - column:
+                  name: lastImageUpdateAt
+                  type: timestamp
+              - column:
+                  name: priceJpy
+                  type: BIGINT
+              - column:
+                  name: makerName
+                  type: VARCHAR(255)
+              - column:
+                  name: productState
+                  type: VARCHAR(255)
+              - column:
+                  name: releaseDate
+                  type: DATE
+            tableName: product
+  - changeSet:
+      id: 0001-init-6
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_product_history
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: priceJpy
+                  type: BIGINT
+              - column:
+                  name: productState
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: product_id
+                  type: BIGINT
+            tableName: product_history
+  - changeSet:
+      id: 0001-init-7
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_product_list_query_result_entry
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: productListQuery_id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: product_id
+                  type: BIGINT
+            tableName: product_list_query_result_entry
+  - changeSet:
+      id: 0001-init-8
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_product_query
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: updatedAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: maxPagination
+                  type: INT
+              - column:
+                  name: searchKeywords
+                  type: VARCHAR(255)
+              - column:
+                  name: filterAnyAvailability
+                  type: BOOLEAN
+              - column:
+                  name: filterPreOrder
+                  type: BOOLEAN
+              - column:
+                  name: filterBackOrder
+                  type: BOOLEAN
+              - column:
+                  name: filterNewItems
+                  type: BOOLEAN
+              - column:
+                  name: filterPreOwnedItems
+                  type: BOOLEAN
+              - column:
+                  name: filterOnSaleItems
+                  type: BOOLEAN
+              - column:
+                  name: category1Id
+                  type: INT
+              - column:
+                  name: category2Id
+                  type: INT
+              - column:
+                  name: category3Id
+                  type: INT
+              - column:
+                  name: category4Id
+                  type: INT
+              - column:
+                  name: characterNameId
+                  type: INT
+              - column:
+                  name: makerId
+                  type: INT
+              - column:
+                  name: originalTitleId
+                  type: INT
+              - column:
+                  name: seriesTitleId
+                  type: INT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: totalItemsCount
+                  type: BIGINT
+              - column:
+                  name: lastQueryAt
+                  type: timestamp
+            tableName: product_query
+  - changeSet:
+      id: 0001-init-9
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_user
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: updatedAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+            tableName: user
+  - changeSet:
+      id: 0001-init-10
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_wishlist
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: updatedAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: name
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: priceDiscountEnabled
+                  type: BOOLEAN
+              - column:
+                  constraints:
+                    nullable: false
+                  name: stockChangeEnabled
+                  type: BOOLEAN
+              - column:
+                  constraints:
+                    nullable: false
+                  name: user_id
+                  type: BIGINT
+            tableName: wishlist
+  - changeSet:
+      id: 0001-init-11
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_wishlist_entry
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: wishlist_id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: product_id
+                  type: BIGINT
+            tableName: wishlist_entry
+  - changeSet:
+      id: 0001-init-12
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: product_id
+            baseTableName: bought_product
+            constraintName: FK_BOUGHT_PRODUCT_ON_PRODUCT
+            referencedColumnNames: id
+            referencedTableName: product
+  - changeSet:
+      id: 0001-init-13
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: user_id
+            baseTableName: bought_product
+            constraintName: FK_BOUGHT_PRODUCT_ON_USER
+            referencedColumnNames: id
+            referencedTableName: user
+  - changeSet:
+      id: 0001-init-14
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: guild_id
+            baseTableName: channel
+            constraintName: FK_CHANNEL_ON_GUILD
+            referencedColumnNames: id
+            referencedTableName: guild
+  - changeSet:
+      id: 0001-init-15
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: channel_id
+            baseTableName: channel_product_list_query
+            constraintName: FK_CHANNEL_PRODUCT_LIST_QUERY_ON_CHANNEL
+            referencedColumnNames: id
+            referencedTableName: channel
+  - changeSet:
+      id: 0001-init-16
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: productListQuery_id
+            baseTableName: channel_product_list_query
+            constraintName: FK_CHANNEL_PRODUCT_LIST_QUERY_ON_PRODUCTLISTQUERY
+            referencedColumnNames: id
+            referencedTableName: product_query
+  - changeSet:
+      id: 0001-init-17
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: product_id
+            baseTableName: product_history
+            constraintName: FK_PRODUCT_HISTORY_ON_PRODUCT
+            referencedColumnNames: id
+            referencedTableName: product
+  - changeSet:
+      id: 0001-init-18
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: product_id
+            baseTableName: product_list_query_result_entry
+            constraintName: FK_PRODUCT_LIST_QUERY_RESULT_ENTRY_ON_PRODUCT
+            referencedColumnNames: id
+            referencedTableName: product
+  - changeSet:
+      id: 0001-init-19
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: productListQuery_id
+            baseTableName: product_list_query_result_entry
+            constraintName: FK_PRODUCT_LIST_QUERY_RESULT_ENTRY_ON_PRODUCTLISTQUERY
+            referencedColumnNames: id
+            referencedTableName: product_query
+  - changeSet:
+      id: 0001-init-20
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: product_id
+            baseTableName: wishlist_entry
+            constraintName: FK_WISHLIST_ENTRY_ON_PRODUCT
+            referencedColumnNames: id
+            referencedTableName: product
+
