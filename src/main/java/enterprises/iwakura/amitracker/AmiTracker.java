@@ -5,6 +5,7 @@ import java.util.List;
 import com.jagrosh.jdautilities.command.CommandClientBuilder;
 
 import enterprises.iwakura.amitracker.command.AmiTrackerCommand;
+import enterprises.iwakura.amitracker.command.SubCommand;
 import enterprises.iwakura.amitracker.service.AmiAmiQueryService;
 import enterprises.iwakura.amitracker.service.ConfigurationService;
 import enterprises.iwakura.amitracker.service.DatabaseService;
@@ -59,9 +60,11 @@ public class AmiTracker extends Module {
     @Override
     public void onCommandClientBuilderInitialization(@NonNull CommandClientBuilder commandClientBuilder) {
         discordCommands.forEach(command -> {
-            log.info("Registering slash command: {}", command.getName());
-            command.init(this);
-            commandClientBuilder.addSlashCommand(command);
+            if (!(command instanceof SubCommand)) {
+                log.info("Registering slash command: {}", command.getName());
+                command.init(this);
+                commandClientBuilder.addSlashCommand(command);
+            }
         });
     }
 }
