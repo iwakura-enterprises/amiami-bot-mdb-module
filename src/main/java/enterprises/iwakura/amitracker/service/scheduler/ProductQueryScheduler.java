@@ -11,6 +11,7 @@ import enterprises.iwakura.amitracker.database.entity.WishlistEntryEntity;
 import enterprises.iwakura.amitracker.database.repository.ProductListQueryRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistEntryRepository;
 import enterprises.iwakura.amitracker.exception.MissingEntityException;
+import enterprises.iwakura.amitracker.exception.QueryFailedException;
 import enterprises.iwakura.amitracker.objects.query.ProductListQueryRequest;
 import enterprises.iwakura.amitracker.objects.query.ProductQueryRequest;
 import enterprises.iwakura.amitracker.service.AmiAmiApiService;
@@ -103,7 +104,9 @@ public class ProductQueryScheduler extends BaseScheduler {
 
         try {
             List<AmiAmiSearchResponse> pageResponses = new ArrayList<>();
-            var firstPage = amiAmiQueryService.scheduleSearch(new ProductListQueryRequest(productListQueryEntity.getId(), 1)).join();
+            var firstPage = amiAmiQueryService.scheduleSearch(new ProductListQueryRequest(
+                productListQueryEntity.getId(), productListQueryEntity.toAmiAmiSearchRequest(1))
+            ).join();
 
             if (!firstPage.isSuccessful()) {
                 log.error("Failed to fetch first page for ProductListQueryEntity with ID {}. Errors: {}",
@@ -124,7 +127,10 @@ public class ProductQueryScheduler extends BaseScheduler {
             );
             if (totalPagesToFetch > 1) {
                 for (int page = 2; page <= totalPagesToFetch; page++) {
-                    var pageResult = amiAmiQueryService.scheduleSearch(new ProductListQueryRequest(productListQueryEntity.getId(), page)).join();
+                    var pageResult = amiAmiQueryService.scheduleSearch(new ProductListQueryRequest(
+                        productListQueryEntity.getId(), productListQueryEntity.toAmiAmiSearchRequest(page))
+                    ).join();
+
                     log.debug("Processing ProductListQueryEntity with ID {}: found {} products on page {}.",
                         productListQueryEntity.getId(),
                         pageResult.getItems().size(),
@@ -159,6 +165,10 @@ public class ProductQueryScheduler extends BaseScheduler {
         } catch (MissingEntityException exception) {
             log.warn("After scheduling and before processing, the ProductListQueryEntity with ID {} was not found. It may have been deleted.",
                 productListQueryEntity.getId()
+            );
+        } catch (QueryFailedException exception) {
+            log.error("Query failed while processing ProductListQueryEntity with ID {}: {}",
+                productListQueryEntity.getId(), exception.getMessage(), exception
             );
         } catch (Exception exception) {
             log.error("Error processing ProductListQueryEntity with ID {}", productListQueryEntity.getId(), exception);
@@ -200,6 +210,10 @@ public class ProductQueryScheduler extends BaseScheduler {
             }
 
             productProcessorService.process(itemResponse);
+        } catch (QueryFailedException exception) {
+            log.error("Query failed while processing WishlistEntryEntity with ID {}: {}",
+                wishlistEntry.getId(), exception.getMessage(), exception
+            );
         } catch (Exception exception) {
             log.error("Error processing WishlistEntryEntity with ID {}", wishlistEntry.getId(), exception);
         } finally {

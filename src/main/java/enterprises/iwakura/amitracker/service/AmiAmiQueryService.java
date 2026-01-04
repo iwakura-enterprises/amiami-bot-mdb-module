@@ -1,19 +1,20 @@
 package enterprises.iwakura.amitracker.service;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
-import enterprises.iwakura.amitracker.database.repository.ProductListQueryRepository;
-import enterprises.iwakura.amitracker.database.repository.ProductRepository;
-import enterprises.iwakura.amitracker.exception.MissingEntityException;
-import enterprises.iwakura.amitracker.exception.QueryException;
-import enterprises.iwakura.amitracker.exception.RecentlyQueriedException;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+
+import enterprises.iwakura.amitracker.exception.QueryFailedException;
 import enterprises.iwakura.amitracker.objects.query.ProductListQueryRequest;
 import enterprises.iwakura.amitracker.objects.query.ProductQueryRequest;
 import enterprises.iwakura.kirara.amiami.request.AmiAmiItemDetailsRequest;
 import enterprises.iwakura.kirara.amiami.response.AmiAmiItemResponse;
+import enterprises.iwakura.kirara.amiami.response.AmiAmiResponse;
 import enterprises.iwakura.kirara.amiami.response.AmiAmiSearchResponse;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.RequiredArgsConstructor;
@@ -27,56 +28,60 @@ public class AmiAmiQueryService {
     private final ConfigurationService configurationService;
     private final AmiAmiApiService amiAmiApiService;
 
-    private final ProductListQueryRepository productListQueryRepository;
-    private final ProductRepository productRepository;
-
+    private Cache<String, AmiAmiItemResponse> itemResponseCache;
+    private Cache<Long, AmiAmiSearchResponse> itemSearchResponseCache;
     private Executor executor;
-    private long lastQueryTimeMillis = 0;
+    private long lastQueryTimeMillis = 0L;
 
     /**
      * Initializes the AmiAmiQueryService.
      */
     public void init() {
         log.info("Initializing AmiAmiQueryService...");
-        executor = Executors.newFixedThreadPool(configurationService.getProductQuery().getApiQueryThreads());
+        var productQueryConfiguration = configurationService.getProductQuery();
+
+        executor = Executors.newFixedThreadPool(productQueryConfiguration.getApiQueryThreads());
+
+        itemResponseCache = CacheBuilder.newBuilder()
+            .maximumSize(productQueryConfiguration.getMaxCacheSize())
+            .expireAfterWrite(productQueryConfiguration.getItemDetailQueryIntervalMillis(), TimeUnit.MILLISECONDS)
+            .recordStats()
+            .build();
+
+        itemSearchResponseCache = CacheBuilder.newBuilder()
+            .maximumSize(productQueryConfiguration.getMaxCacheSize())
+            .expireAfterWrite(productQueryConfiguration.getSearchQueryIntervalMillis(), TimeUnit.MILLISECONDS)
+            .recordStats()
+            .build();
     }
 
     /**
      * Schedules a search query to be performed in the background.
      *
-     * @param productListQueryRequest The search query request details.
+     * @param queryRequest The search query request details.
+     *
      * @return A CompletableFuture that will complete with the search response.
      */
-    public CompletableFuture<AmiAmiSearchResponse> scheduleSearch(ProductListQueryRequest productListQueryRequest) {
+    public CompletableFuture<AmiAmiSearchResponse> scheduleSearch(ProductListQueryRequest queryRequest) {
         var future = new CompletableFuture<AmiAmiSearchResponse>();
 
         executor.execute(() -> {
-            // Check if exists
-            var optionalProductListQuery = productListQueryRepository.findById(productListQueryRequest.getProductListQueryId());
-            if (optionalProductListQuery.isEmpty()) {
-                log.warn("ProductListQueryEntity with ID {} not found for query request",
-                    productListQueryRequest.getProductListQueryId()
-                );
-                future.completeExceptionally(new MissingEntityException("ProductListQueryEntity[%d] not found".formatted(
-                    productListQueryRequest.getProductListQueryId()
-                )));
-                return;
-            }
-
-            // Enforce minimum interval between API queries for the thread pool
-            enforceQueryInterval();
-            // TODO: Enforce exponential backoff on rate limiting
-
-            var requestParams = optionalProductListQuery.get().toAmiAmiSearchRequest(productListQueryRequest.getPage());
-
-            try {
-                future.complete(amiAmiApiService.search(requestParams).send().join());
-            } catch (Exception e) {
-                future.completeExceptionally(new QueryException("Error performing AmiAmi search query for ProductListQueryRequest: %s".formatted(
-                    productListQueryRequest
-                ), e));
-            } finally {
-                lastQueryTimeMillis = System.currentTimeMillis();
+            // Check if recently queried
+            var recentResponse = itemSearchResponseCache.getIfPresent(queryRequest.getProductListQueryId());
+            if (recentResponse != null) {
+                log.warn("ProductListQueryEntity {} found in recently queried cache, skipping query",
+                    queryRequest.getProductListQueryId());
+                future.complete(recentResponse);
+            } else {
+                try {
+                    var response = performQuery(() -> amiAmiApiService.search(queryRequest.getAmiAmiSearchRequest()).send().join());
+                    future.complete(response);
+                } catch (Exception exception) {
+                    future.completeExceptionally(
+                        new QueryFailedException("Failed to query search for ProductListQueryEntity[%d]".formatted(
+                            queryRequest.getProductListQueryId()), exception)
+                    );
+                }
             }
         });
 
@@ -86,66 +91,113 @@ public class AmiAmiQueryService {
     /**
      * Schedules an item detail query to be performed in the background.
      *
-     * @param productQueryRequest The item detail query request details.
+     * @param queryRequest The item detail query request details.
+     *
      * @return A CompletableFuture that will complete with the item detail response.
      */
-    public CompletableFuture<AmiAmiItemResponse> scheduleItemDetail(ProductQueryRequest productQueryRequest) {
+    public CompletableFuture<AmiAmiItemResponse> scheduleItemDetail(ProductQueryRequest queryRequest) {
         var future = new CompletableFuture<AmiAmiItemResponse>();
 
         executor.execute(() -> {
-            var config = configurationService.getProductQuery();
+            // Check if recently queried
+            var recentResponse = itemResponseCache.getIfPresent(queryRequest.getProductCode());
+            if (recentResponse != null) {
+                log.warn("Product item {} found in recently queried cache, skipping query",
+                    queryRequest.getProductCode());
+                future.complete(recentResponse);
+            } else {
+                var itemDetailsRequest = AmiAmiItemDetailsRequest.builder()
+                    .gCode(queryRequest.getProductCode())
+                    .build();
 
-            // Check if recently queried / updated by other means
-            var optionalProduct = productRepository.findByCode(productQueryRequest.getProductCode());
-            if (optionalProduct.isPresent()) {
-                var lastUpdatedMillis = Optional.ofNullable(optionalProduct.get().getUpdatedAt())
-                    .map(ts -> ts.toInstant().toEpochMilli())
-                    .orElse(0L);
-                long now = System.currentTimeMillis();
-                if (now - lastUpdatedMillis < config.getItemDetailQueryIntervalMillis()) {
-                    log.warn("Skipping item detail query for product code {} as it was recently updated - last updated at {}",
-                        productQueryRequest.getProductCode(), optionalProduct.get().getUpdatedAt()
+                try {
+                    var response = performQuery(() ->
+                        amiAmiApiService.getItemDetails(itemDetailsRequest).send().join()
                     );
-                    future.completeExceptionally(new RecentlyQueriedException("Product code %s was recently updated".formatted(
-                        productQueryRequest.getProductCode()
-                    )));
-                    return;
+                    itemResponseCache.put(queryRequest.getProductCode(), response);
+                    future.complete(response);
+                } catch (Exception exception) {
+                    future.completeExceptionally(
+                        new QueryFailedException("Failed to query item details for product code %s".formatted(
+                            queryRequest.getProductCode()), exception)
+                    );
                 }
-            }
-
-            // Enforce minimum interval between API queries for the thread pool
-            enforceQueryInterval();
-            // TODO: Enforce exponential backoff on rate limiting
-
-            try {
-                future.complete(amiAmiApiService.getItemDetails(AmiAmiItemDetailsRequest.builder()
-                    .gCode(productQueryRequest.getProductCode())
-                    .build()
-                ).send().join());
-            } catch (Exception e) {
-                future.completeExceptionally(new QueryException("Error performing AmiAmi item detail query for product %s".formatted(
-                    productQueryRequest.getProductCode()
-                ), e));
-            } finally {
-                lastQueryTimeMillis = System.currentTimeMillis();
             }
         });
 
         return future;
     }
 
+    /**
+     * Performs the query with rate limit handling. There can be only one query at a time.
+     *
+     * @param supplier The supplier that performs the query.
+     * @param <T>      The type of the response.
+     *
+     * @return The response from the query.
+     */
+    private synchronized <T extends AmiAmiResponse> T performQuery(Supplier<T> supplier) {
+        var configuration = configurationService.getProductQuery();
+        int retry = 0;
+        final long maxRetries = configuration.getMaxQueryRetriesOnRateLimit();
+
+        while (retry < maxRetries) {
+            enforceQueryInterval();
+
+            T response;
+
+            try {
+                response = supplier.get();
+            } catch (Exception exception) {
+                throw new QueryFailedException("Failed to query AmiAmi API", exception);
+            } finally {
+                lastQueryTimeMillis = System.currentTimeMillis();
+            }
+
+            if (response.isRateLimited()) {
+                long backoffMillis = configuration.getRateLimitBackoffMillis() * (retry + 1);
+                log.warn("AmiAmi API rate limited the request! (retry {}/{}) backing off for {}ms",
+                    retry + 1, maxRetries, backoffMillis
+                );
+
+                sleep(backoffMillis);
+            } else {
+                if (!response.isSuccessful()) {
+                    throw new QueryFailedException("AmiAmi API query failed: " + response.getResponseValue(), null);
+                }
+
+                return response;
+            }
+
+            retry++;
+        }
+
+        throw new QueryFailedException(
+            "Exceeded maximum retries (" + maxRetries + ") for AmiAmi API queries due to rate limiting", null);
+    }
+
+    /**
+     * Enforces the query interval by sleeping if necessary.
+     */
     private void enforceQueryInterval() {
         var config = configurationService.getProductQuery();
         long now = System.currentTimeMillis();
         long timeSinceLastQuery = now - lastQueryTimeMillis;
-        if (timeSinceLastQuery < config.getApiQueryMinIntervalMillis()) {
-            long sleepTime = config.getApiQueryMinIntervalMillis() - timeSinceLastQuery;
-            try {
-                Thread.sleep(sleepTime);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+        if (timeSinceLastQuery < config.getQueryBackoffMillis()) {
+            sleep(config.getQueryBackoffMillis() - timeSinceLastQuery);
         }
-        lastQueryTimeMillis = now;
+    }
+
+    /**
+     * Sleeps for the specified number of milliseconds.
+     *
+     * @param millis The number of milliseconds to sleep.
+     */
+    private void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

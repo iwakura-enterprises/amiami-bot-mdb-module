@@ -1,5 +1,6 @@
 package enterprises.iwakura.amitracker.objects.query;
 
+import enterprises.iwakura.kirara.amiami.request.AmiAmiSearchRequest;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
@@ -8,6 +9,6 @@ import lombok.RequiredArgsConstructor;
 public class ProductListQueryRequest implements QueryRequest {
 
     private final long productListQueryId;
-    private final int page;
+    private final AmiAmiSearchRequest amiAmiSearchRequest;
 
 }
