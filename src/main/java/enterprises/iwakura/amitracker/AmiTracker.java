@@ -6,10 +6,14 @@ import com.jagrosh.jdautilities.command.CommandClientBuilder;
 
 import enterprises.iwakura.amitracker.command.AmiTrackerCommand;
 import enterprises.iwakura.amitracker.command.SubCommand;
+import enterprises.iwakura.amitracker.service.AkashaApiService;
 import enterprises.iwakura.amitracker.service.AmiAmiQueryService;
 import enterprises.iwakura.amitracker.service.ConfigurationService;
 import enterprises.iwakura.amitracker.service.DatabaseService;
+import enterprises.iwakura.amitracker.service.ProductImageService;
 import enterprises.iwakura.amitracker.service.scheduler.ProductQueryScheduler;
+import enterprises.iwakura.ganyu.Ganyu;
+import enterprises.iwakura.ganyu.GanyuCommand;
 import enterprises.iwakura.modularbot.base.Module;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.NonNull;
@@ -24,10 +28,13 @@ public class AmiTracker extends Module {
     private final ConfigurationService configurationService;
     private final DatabaseService databaseService;
     private final AmiAmiQueryService amiAmiQueryService;
+    private final AkashaApiService akashaApiService;
+    private final ProductImageService productImageService;
 
     private final ProductQueryScheduler productQueryScheduler;
 
     private final List<AmiTrackerCommand> discordCommands;
+    private final List<GanyuCommand> consoleCommands;
 
     @Override
     public void onEnable() {
@@ -43,7 +50,9 @@ public class AmiTracker extends Module {
 
         configurationService.init(this.getModuleDirectoryPath());
         databaseService.initialize();
+        akashaApiService.init();
         amiAmiQueryService.init();
+        productImageService.init();
         productQueryScheduler.initialize();
 
         log.info("{} started in {} ms", info.getName(), System.currentTimeMillis() - startMillis);
@@ -66,5 +75,10 @@ public class AmiTracker extends Module {
                 commandClientBuilder.addSlashCommand(command);
             }
         });
+    }
+
+    @Override
+    public void onConsoleCommandRegistration(@NonNull Ganyu ganyu) {
+        consoleCommands.forEach(ganyu::registerCommands);
     }
 }

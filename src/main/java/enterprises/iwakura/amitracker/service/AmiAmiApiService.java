@@ -16,4 +16,15 @@ public class AmiAmiApiService extends AmiAmiApi {
     public AmiAmiApiService(Gson gson) {
         super(gson);
     }
+
+    /**
+     * Creates a URL to the AmiAmi product detail page for the given product code.
+     *
+     * @param productCode the product code
+     *
+     * @return the URL to the AmiAmi product detail page
+     */
+    public String createAmiAmiProductDetailUrl(String productCode) {
+        return String.format("https://www.amiami.com/eng/detail/?gcode=%s", productCode);
+    }
 }

@@ -39,18 +39,19 @@ public class AmiAmiQueryService {
     public void init() {
         log.info("Initializing AmiAmiQueryService...");
         var productQueryConfiguration = configurationService.getProductQuery();
+        var cacheConfiguration = configurationService.getCache();
 
         executor = Executors.newFixedThreadPool(productQueryConfiguration.getApiQueryThreads());
 
         itemResponseCache = CacheBuilder.newBuilder()
-            .maximumSize(productQueryConfiguration.getMaxCacheSize())
-            .expireAfterWrite(productQueryConfiguration.getItemDetailQueryIntervalMillis(), TimeUnit.MILLISECONDS)
+            .maximumSize(cacheConfiguration.getMaxProductCacheSize())
+            .expireAfterWrite((long) (productQueryConfiguration.getItemDetailQueryIntervalMillis() * 0.9), TimeUnit.MILLISECONDS)
             .recordStats()
             .build();
 
         itemSearchResponseCache = CacheBuilder.newBuilder()
-            .maximumSize(productQueryConfiguration.getMaxCacheSize())
-            .expireAfterWrite(productQueryConfiguration.getSearchQueryIntervalMillis(), TimeUnit.MILLISECONDS)
+            .maximumSize(cacheConfiguration.getMaxProductListCacheSize())
+            .expireAfterWrite((long) (productQueryConfiguration.getSearchQueryIntervalMillis() * 0.9), TimeUnit.MILLISECONDS)
             .recordStats()
             .build();
     }
@@ -129,6 +130,33 @@ public class AmiAmiQueryService {
     }
 
     /**
+     * Schedules an image query to be performed in the background.
+     *
+     * @param imageUrl The URL of the image to query.
+     *
+     * @return A CompletableFuture that will complete with the image data as a byte array.
+     */
+    public CompletableFuture<byte[]> queryImage(String imageUrl) {
+        var future = new CompletableFuture<byte[]>();
+
+        executor.execute(() -> {
+            try {
+                var imageData = performNonAmiResponseQuery(() ->
+                    amiAmiApiService.getImage(imageUrl).send().join()
+                );
+                future.complete(imageData);
+            } catch (Exception exception) {
+                future.completeExceptionally(
+                    new QueryFailedException("Failed to query image from URL %s".formatted(
+                        imageUrl), exception)
+                );
+            }
+        });
+
+        return future;
+    }
+
+    /**
      * Performs the query with rate limit handling. There can be only one query at a time.
      *
      * @param supplier The supplier that performs the query.
@@ -166,6 +194,50 @@ public class AmiAmiQueryService {
                     throw new QueryFailedException("AmiAmi API query failed: " + response.getResponseValue(), null);
                 }
 
+                return response;
+            }
+
+            retry++;
+        }
+
+        throw new QueryFailedException(
+            "Exceeded maximum retries (" + maxRetries + ") for AmiAmi API queries due to rate limiting", null);
+    }
+
+    /**
+     * Performs the query with rate limit handling for non-AmiAmiResponse types. There can be only one query at a time.
+     *
+     * @param supplier The supplier that performs the query.
+     * @param <T>      The type of the response.
+     *
+     * @return The response from the query.
+     */
+    private synchronized <T> T performNonAmiResponseQuery(Supplier<T> supplier) {
+        var configuration = configurationService.getProductQuery();
+        int retry = 0;
+        final long maxRetries = configuration.getMaxQueryRetriesOnRateLimit();
+
+        while (retry < maxRetries) {
+            enforceQueryInterval();
+
+            T response;
+
+            try {
+                response = supplier.get();
+            } catch (Exception exception) {
+                throw new QueryFailedException("Failed to query AmiAmi API", exception);
+            } finally {
+                lastQueryTimeMillis = System.currentTimeMillis();
+            }
+
+            if (response == null) {
+                long backoffMillis = configuration.getRateLimitBackoffMillis() * (retry + 1);
+                log.warn("AmiAmi Image API returned null! (retry {}/{}) backing off for {}ms",
+                    retry + 1, maxRetries, backoffMillis
+                );
+
+                sleep(backoffMillis);
+            } else {
                 return response;
             }
 

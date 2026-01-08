@@ -27,7 +27,7 @@ import lombok.NoArgsConstructor;
 public class GuildEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(nullable = false)
     private Long id;
 
     @CreationTimestamp

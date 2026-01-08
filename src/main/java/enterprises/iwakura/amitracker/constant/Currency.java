@@ -1,6 +1,7 @@
 package enterprises.iwakura.amitracker.constant;
 
 import java.util.List;
+import java.util.Optional;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -26,4 +27,22 @@ public enum Currency {
     public static final List<Choice> CHOICES = ALL.stream()
         .map(currency -> new Choice("%s (%s)".formatted(currency.getEnglishName(), currency.getLocalName()), currency.name()))
         .toList();
+    public static final String CHOICES_STRING = ALL.stream()
+        .map(Currency::name)
+        .reduce((a, b) -> a + ", " + b)
+        .orElse("");
+
+    /**
+     * Convert a string to a Currency enum, case-insensitive.
+     *
+     * @param str the string representation of the currency
+     * @return an Optional containing the Currency if found, otherwise empty
+     */
+    public static Optional<Currency> fromString(String str) {
+        try {
+            return Optional.of(Currency.valueOf(str.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
 }

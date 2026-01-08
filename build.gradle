@@ -58,6 +58,7 @@ dependencies {
     compileOnly 'enterprises.iwakura:jean-gson:1.1.1'
 
     amber "enterprises.iwakura:amiami-api-kirara:1.2.0"
+    amber 'enterprises.iwakura:akasha-api-kirara:1.2.0'
     amber "enterprises.iwakura:kirara-httpclient:1.4.1"
     amber "enterprises.iwakura:kirara-core:1.4.1"
     amber "enterprises.iwakura:kirara-gson:1.4.1"
@@ -121,8 +122,9 @@ shadowJar {
 
 
 tasks.register('copyJarToModules') {
+    dependsOn shadowJar
     var jarFile = "${buildDir}/libs/ami-tracker.jar"
-    var destDir = "C:\\core\\coding\\personal\\ModularDiscordBot\\build\\libs\\modules"
+    var destDir = "${buildDir}/../run/modules/"
     doLast {
         copy {
             from jarFile

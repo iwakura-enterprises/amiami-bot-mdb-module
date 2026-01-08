@@ -2,6 +2,7 @@ package enterprises.iwakura.amitracker.database.entity;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
@@ -36,10 +37,10 @@ public class ProductEntity {
     private Long id;
 
     @CreationTimestamp
-    private OffsetDateTime createdAt;
+    private OffsetDateTime createdAt = OffsetDateTime.now();
 
     @UpdateTimestamp
-    private OffsetDateTime updatedAt;
+    private OffsetDateTime updatedAt = OffsetDateTime.now();
 
     @Column(nullable = false)
     private String code;
@@ -68,5 +69,5 @@ public class ProductEntity {
      * History for the product.
      */
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "product")
-    private List<ProductHistoryEntity> history;
+    private List<ProductHistoryEntity> history = new ArrayList<>();
 }
