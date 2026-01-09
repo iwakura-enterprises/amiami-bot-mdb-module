@@ -1,13 +1,17 @@
 package enterprises.iwakura.amitracker.service;
 
+import java.util.Collection;
 import java.util.Optional;
 
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
+import enterprises.iwakura.amitracker.object.ProductChoice;
 import enterprises.iwakura.amitracker.objects.query.ProductQueryRequest;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.interactions.commands.Command.Choice;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 
 @Bean
 @Slf4j
@@ -43,5 +47,19 @@ public class ProductService {
             var response = amiAmiQueryService.scheduleItemDetail(new ProductQueryRequest(productCode)).join();
             return productProcessorService.process(response);
         }
+    }
+
+    /**
+     * Suggest product codes based on a search query.
+     *
+     * @param searchQuery the search query
+     *
+     * @return a collection of choices for product codes
+     */
+    public Collection<Choice> suggestProductCodes(String searchQuery) {
+        var products = productRepository.suggestProductCodesFiltered(searchQuery, OptionData.MAX_CHOICE_NAME_LENGTH);
+        return products.stream()
+            .map(product -> new ProductChoice(product).toChoice())
+            .toList();
     }
 }

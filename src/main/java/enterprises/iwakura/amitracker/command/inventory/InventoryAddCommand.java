@@ -17,6 +17,7 @@ import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -52,12 +53,20 @@ public class InventoryAddCommand extends InventorySubCommand {
         this.help = "Add product to your wishlist";
 
         this.options = List.of(
-            // TODO: Autocomplete
-            new OptionData(OptionType.STRING, OPTION_PRODUCT_CODE, "Product code (gcode/scode)", true),
+            new OptionData(OptionType.STRING, OPTION_PRODUCT_CODE, "Product code (gcode/scode)", true, true),
             new OptionData(OptionType.NUMBER, OPTION_PRICE, "Price paid for the product (default in ¥JPY)", false),
             new OptionData(OptionType.STRING, OPTION_PURCHASE_DATE, "Purchase date (YYYY-MM-DD)", false),
             new OptionData(OptionType.STRING, OPTION_CURRENCY, "Currency", false).addChoices(Currency.CHOICES)
         );
+    }
+
+    @Override
+    public void onAutoComplete(CommandAutoCompleteInteractionEvent event) {
+        var focusedOption = event.getFocusedOption().getName();
+        var focusedValue = event.getFocusedOption().getValue();
+        if (focusedOption.equals(OPTION_PRODUCT_CODE)) {
+            event.replyChoices(productService.suggestProductCodes(focusedValue)).queue();
+        }
     }
 
     @Override

@@ -1,6 +1,7 @@
 package enterprises.iwakura.amitracker.database.repository;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
@@ -86,6 +87,28 @@ public class ProductRepository extends AmiBaseRepository<ProductEntity, Long> {
             query.setParameter("productCode", productCode.toUpperCase());
             var result = query.uniqueResultOptional();
             return result.isPresent();
+        });
+    }
+
+    /**
+     * Suggests product codes filtered by a search query.
+     *
+     * @param searchQuery the search query
+     * @param maxElements maximum number of results to return
+     *
+     * @return list of product entities matching the search query
+     */
+    public List<ProductEntity> suggestProductCodesFiltered(String searchQuery, int maxElements) {
+        return databaseService.runInThreadTransaction(session -> {
+            String hql = """
+                FROM ProductEntity p
+                WHERE p.code LIKE :searchPattern
+                ORDER BY p.code ASC
+                """;
+            return session.createQuery(hql, ProductEntity.class)
+                .setParameter("searchPattern", "%" + searchQuery.toUpperCase() + "%")
+                .setMaxResults(maxElements)
+                .getResultList();
         });
     }
 }

@@ -1,5 +1,6 @@
 package enterprises.iwakura.amitracker.service;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,6 +63,8 @@ public class ProductProcessorService {
             // Update existing product entity & check for changes
             // TODO
 
+            existingProduct.setUpdatedAt(OffsetDateTime.now());
+            productRepository.save(existingProduct);
             return Optional.of(existingProduct);
         } else {
             // Create new product
