@@ -98,12 +98,13 @@ public class InventoryAddCommand extends InventorySubCommand {
             return;
         }
 
+        var hook = event.deferReply(true).complete();
+
         userService.getOrCreateUser(user);
         if (guild != null) {
             guildService.getOrCreateGuild(guild);
         }
 
-        var hook = event.deferReply(true).complete();
         handleProductAdd(user, hook, productCode, purchaseDate, price, currency.get());
     }
 

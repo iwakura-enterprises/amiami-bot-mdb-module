@@ -10,15 +10,12 @@ import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.service.WishlistService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
-import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 
 @Bean
-public class WishlistDeleteCommand extends WishlistSubCommand {
+public class WishlistCreateCommand extends WishlistSubCommand {
 
     public static final String OPTION_WISHLIST_NAME = "wishlist-name";
 
@@ -26,7 +23,7 @@ public class WishlistDeleteCommand extends WishlistSubCommand {
     private final GuildService guildService;
     private final WishlistService wishlistService;
 
-    public WishlistDeleteCommand(ConcurrencyService concurrencyService,
+    public WishlistCreateCommand(ConcurrencyService concurrencyService,
         UserService userService,
         GuildService guildService,
         WishlistService wishlistService
@@ -35,11 +32,11 @@ public class WishlistDeleteCommand extends WishlistSubCommand {
         this.userService = userService;
         this.guildService = guildService;
         this.wishlistService = wishlistService;
-        this.name = "delete";
-        this.help = "Delete your wishlist";
+        this.name = "create";
+        this.help = "Create new wishlist";
 
         this.options = List.of(
-            new OptionData(OptionType.STRING, OPTION_WISHLIST_NAME, "Choose specific wishlist", true, true)
+            new OptionData(OptionType.STRING, OPTION_WISHLIST_NAME, "Wishlist name", true)
         );
     }
 
@@ -47,8 +44,7 @@ public class WishlistDeleteCommand extends WishlistSubCommand {
     protected void executeAsync(SlashCommandEvent event) {
         var user = event.getUser();
         var guild = event.getGuild();
-        var wishlistName = event.getOption(OPTION_WISHLIST_NAME, Constants.DEFAULT_WISHLIST_NAME,
-            OptionMapping::getAsString);
+        var wishlistName = event.getOption(OPTION_WISHLIST_NAME, Constants.DEFAULT_WISHLIST_NAME, OptionMapping::getAsString);
 
         var hook = event.deferReply(true).complete();
 
@@ -57,31 +53,16 @@ public class WishlistDeleteCommand extends WishlistSubCommand {
             guildService.getOrCreateGuild(guild);
         }
 
-        handleDelete(user, hook, wishlistName);
-    }
-
-    public boolean handleDelete(User user, InteractionHook hook, String wishlistName) {
-        var errorContext = wishlistService.deleteWishlist(user.getIdLong(), wishlistName);
+        wishlistService.ensureDefaultWishlistExists(user.getIdLong());
+        var errorContext = wishlistService.createWishlist(user.getIdLong(), wishlistName);
 
         if (errorContext.isSuccess()) {
-            hook.editOriginal("Wishlist '" + wishlistName + "' deleted successfully!").queue();
-            return true;
+            hook.editOriginal("Wishlist '" + wishlistName + "' created successfully!").queue();
         } else {
             switch (errorContext.getType()) {
-                case WISHLIST_NOT_FOUND -> hook.editOriginal("Wishlist '" + wishlistName + "' does not exist.").queue();
-                default -> hook.editOriginal("An unknown error occurred while deleting the wishlist.").queue();
+                case WISHLIST_ALREADY_EXISTS -> hook.editOriginal("Wishlist '" + wishlistName + "' already exists!").queue();
+                default -> hook.editOriginal("An unknown error occurred while creating the wishlist.").queue();
             }
-            return false;
-        }
-    }
-
-    @Override
-    public void onAutoComplete(CommandAutoCompleteInteractionEvent event) {
-        var focusedOption = event.getFocusedOption().getName();
-        var focusedValue = event.getFocusedOption().getValue();
-
-        if (focusedOption.equals(OPTION_WISHLIST_NAME)) {
-            event.replyChoices(wishlistService.suggestWishlistNames(event.getUser().getIdLong(), focusedValue)).queue();
         }
     }
 }

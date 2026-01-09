@@ -2,9 +2,11 @@ package enterprises.iwakura.amitracker.service;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
+import enterprises.iwakura.amitracker.exception.QueryFailedException;
 import enterprises.iwakura.amitracker.object.ProductChoice;
 import enterprises.iwakura.amitracker.objects.query.ProductQueryRequest;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
@@ -44,8 +46,16 @@ public class ProductService {
             return optionalProduct;
         } else {
             log.info("Product with code {} not found in database, scheduling an query", productCode);
-            var response = amiAmiQueryService.scheduleItemDetail(new ProductQueryRequest(productCode)).join();
-            return productProcessorService.process(response);
+            try {
+                var response = amiAmiQueryService.scheduleItemDetail(new ProductQueryRequest(productCode)).join();
+                return productProcessorService.process(response);
+            } catch (CompletionException exception) {
+                if (exception.getCause() instanceof QueryFailedException queryFailedException) {
+                    log.warn("Failed to query product with code {}: {}", productCode, queryFailedException.getMessage());
+                    return Optional.empty();
+                }
+                throw exception;
+            }
         }
     }
 

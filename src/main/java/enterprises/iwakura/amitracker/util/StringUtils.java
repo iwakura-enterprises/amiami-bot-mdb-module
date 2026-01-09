@@ -22,4 +22,18 @@ public class StringUtils {
         }
         return input.substring(0, maxLength);
     }
+
+    /**
+     * Capitalizes the first letter of the input string and makes the rest lowercase.
+     *
+     * @param name the input string
+     *
+     * @return the capitalized string
+     */
+    public static String capitalize(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+        return name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
+    }
 }

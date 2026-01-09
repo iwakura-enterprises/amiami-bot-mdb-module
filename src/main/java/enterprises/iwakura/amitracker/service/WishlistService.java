@@ -1,18 +1,23 @@
 package enterprises.iwakura.amitracker.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 import enterprises.iwakura.amitracker.database.entity.WishlistEntity;
+import enterprises.iwakura.amitracker.database.entity.WishlistEntryEntity;
 import enterprises.iwakura.amitracker.database.repository.WishlistEntryRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistRepository;
 import enterprises.iwakura.amitracker.object.ErrorContext;
 import enterprises.iwakura.amitracker.object.ErrorContext.Type;
+import enterprises.iwakura.amitracker.object.Page;
+import enterprises.iwakura.amitracker.object.ProductChoice;
 import enterprises.iwakura.amitracker.object.WishlistChoice;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.interactions.commands.Command.Choice;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 
 @Bean
 @Slf4j
@@ -24,6 +29,7 @@ public class WishlistService {
     private final ProductService productService;
     private final WishlistRepository wishlistRepository;
     private final WishlistEntryRepository wishlistEntryRepository;
+    private final DatabaseService databaseService;
 
     /**
      * Finds a wishlist for a specific user by wishlist name.
@@ -52,7 +58,7 @@ public class WishlistService {
         if (optionalWishlist.isPresent()) {
             var wishlist = optionalWishlist.get();
 
-            if (!wishlist.containsProductCode(productCode)) {
+            if (!wishlistRepository.isProductInWishlist(wishlist.getId(), productCode)) {
                 var optionalProduct = productService.getOrQueryProduct(productCode);
 
                 if (optionalProduct.isPresent()) {
@@ -86,13 +92,39 @@ public class WishlistService {
      * @return a list of Choice objects representing the suggested wishlist names
      */
     public List<Choice> suggestWishlistNames(long userId, String wishlistName) {
-        var wishlists = wishlistRepository.suggestWishlistNamesForUser(userId, wishlistName);
-        if (wishlists.isEmpty()) {
-            wishlists = List.of(DEFAULT_WISHLIST_ENTITY_PLACEHOLDER);
-        }
-        return wishlists.stream()
-            .map(wishlist -> new WishlistChoice(wishlist).toChoice())
-            .toList();
+        return databaseService.runInThreadTransaction(session -> {
+            var wishlists = wishlistRepository.suggestWishlistNamesForUser(userId, wishlistName);
+            if (wishlists.isEmpty()) {
+                wishlists = List.of(DEFAULT_WISHLIST_ENTITY_PLACEHOLDER);
+            }
+            return wishlists.stream()
+                .map(wishlist -> new WishlistChoice(wishlist).toChoice())
+                .toList();
+        });
+    }
+
+    /**
+     * Suggests product codes in a user's wishlist based on a search string.
+     *
+     * @param userId       the ID of the user
+     * @param wishlistName the name of the wishlist
+     * @param productCode  the search string for product codes
+     *
+     * @return a list of Choice objects representing the suggested product codes
+     */
+    public List<Choice> suggestProductCodesInWishlist(long userId, String wishlistName, String productCode) {
+        return databaseService.runInThreadTransaction(session -> {
+            var optionalWishlist = findWishlistForUser(userId, wishlistName);
+            if (optionalWishlist.isEmpty()) {
+                return List.of();
+            }
+            var wishlist = optionalWishlist.get();
+            var entries = wishlistEntryRepository.suggestProductsInWishlist(
+                userId, wishlist.getId(), productCode, OptionData.MAX_CHOICE_NAME_LENGTH);
+            return entries.stream()
+                .map(entry -> new ProductChoice(entry.getProduct()).toChoice())
+                .toList();
+        });
     }
 
     /**
@@ -102,5 +134,79 @@ public class WishlistService {
      */
     public void ensureDefaultWishlistExists(long userId) {
         wishlistRepository.ensureDefaultWishlistExistsForUser(userId);
+    }
+
+    /**
+     * Retrieves a paginated list of wishlist entries for a specific user and wishlist.
+     *
+     * @param userId     the ID of the user
+     * @param wishlistId the ID of the wishlist
+     * @param pageSize   the number of entries per page
+     * @param pageIndex  the index of the page to retrieve
+     *
+     * @return a Page object containing the wishlist entries
+     */
+    public Page<WishlistEntryEntity> getInventoryPage(long userId, long wishlistId, int pageSize, int pageIndex) {
+        return wishlistEntryRepository.findWishlistEntriesPaged(userId, wishlistId, pageSize, pageIndex);
+    }
+
+    /**
+     * Removes a product from a user's wishlist.
+     *
+     * @param userId       the ID of the user
+     * @param wishlistName the name of the wishlist
+     * @param productCode  the code of the product to remove
+     *
+     * @return true if the product was removed, false otherwise
+     */
+    public boolean removeProductFromWishlist(long userId, String wishlistName, String productCode) {
+        return wishlistEntryRepository.removeWishlistEntry(userId, wishlistName, productCode);
+    }
+
+    /**
+     * Creates a new wishlist for a user.
+     *
+     * @param userId       the ID of the user
+     * @param wishlistName the name of the wishlist to create
+     *
+     * @return an ErrorContext indicating success or if the wishlist already exists
+     */
+    public ErrorContext createWishlist(long userId, String wishlistName) {
+        var optionalWishlist = findWishlistForUser(userId, wishlistName);
+
+        if (optionalWishlist.isPresent()) {
+            return ErrorContext.of(Type.WISHLIST_ALREADY_EXISTS, wishlistName);
+        } else {
+            wishlistRepository.createWishlist(userId, wishlistName);
+            return ErrorContext.success();
+        }
+    }
+
+    /**
+     * Deletes a wishlist for a user.
+     *
+     * @param userId       the ID of the user
+     * @param wishlistName the name of the wishlist to delete
+     *
+     * @return an ErrorContext indicating success or if the wishlist was not found
+     */
+    public ErrorContext deleteWishlist(long userId, String wishlistName) {
+        var optionalWishlist = findWishlistForUser(userId, wishlistName);
+
+        if (optionalWishlist.isPresent()) {
+            wishlistRepository.deleteById(optionalWishlist.get().getId());
+            return ErrorContext.success();
+        } else {
+            return ErrorContext.of(Type.WISHLIST_NOT_FOUND, wishlistName);
+        }
+    }
+
+    /**
+     * Saves the given wishlist entity to the database.
+     *
+     * @param wishlist the WishlistEntity to save
+     */
+    public void saveWishlist(WishlistEntity wishlist) {
+        wishlistRepository.save(wishlist);
     }
 }

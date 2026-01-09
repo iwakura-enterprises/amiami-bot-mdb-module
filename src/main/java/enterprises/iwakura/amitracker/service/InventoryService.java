@@ -82,8 +82,8 @@ public class InventoryService {
      *
      * @return List of matching product codes
      */
-    public List<Choice> getFilteredBoughtProductChoices(long userId, String searchingProductCode) {
-        var products = boughtProductRepository.findBoughtProductCodesFiltered(userId, searchingProductCode, OptionData.MAX_CHOICE_NAME_LENGTH);
+    public List<Choice> suggestBoughtProducts(long userId, String searchingProductCode) {
+        var products = boughtProductRepository.suggestBoughtProducts(userId, searchingProductCode, OptionData.MAX_CHOICE_NAME_LENGTH);
         return products.stream()
             .map(product -> new ProductChoice(product).toChoice())
             .toList();

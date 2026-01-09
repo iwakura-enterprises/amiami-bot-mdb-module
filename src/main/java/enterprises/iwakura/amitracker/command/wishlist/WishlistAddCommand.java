@@ -11,7 +11,9 @@ import enterprises.iwakura.amitracker.service.ProductService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.service.WishlistService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
+import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
@@ -65,18 +67,27 @@ public class WishlistAddCommand extends WishlistSubCommand {
         }
 
         wishlistService.ensureDefaultWishlistExists(user.getIdLong());
+        handleProductAdd(user, hook, wishlistName, productCode);
+    }
+
+    public boolean handleProductAdd(User user, InteractionHook hook, String wishlistName, String productCode) {
         var errorContext = wishlistService.addProductToWishlist(user.getIdLong(), wishlistName, productCode);
 
         if (errorContext.isSuccess()) {
             hook.editOriginal("Product `%s` has been added to your wishlist `%s`.".formatted(productCode, wishlistName)).queue();
+            return true;
         } else {
             switch (errorContext.getType()) {
                 case PRODUCT_NOT_FOUND -> hook.editOriginal("Product `%s` was not found.".formatted(productCode)).queue();
                 case WISHLIST_NOT_FOUND -> hook.editOriginal("Wishlist `%s` was not found.".formatted(wishlistName)).queue();
-                case PRODUCT_ALREADY_IN_WISHLIST -> hook.editOriginal("Product `%s` is already in your wishlist `%s`.".formatted(productCode, wishlistName)).queue();
-                case WISHLIST_ENTRY_NOT_ADDED -> hook.editOriginal("Failed to add product `%s` to your wishlist `%s`.".formatted(productCode, wishlistName)).queue();
-                default -> hook.editOriginal("An unknown error occurred while adding product `%s` to your wishlist `%s`.".formatted(productCode, wishlistName)).queue();
+                case PRODUCT_ALREADY_IN_WISHLIST -> hook.editOriginal("Product `%s` is already in your wishlist `%s`.".formatted(
+                    productCode, wishlistName)).queue();
+                case WISHLIST_ENTRY_NOT_ADDED -> hook.editOriginal("Failed to add product `%s` to your wishlist `%s`.".formatted(
+                    productCode, wishlistName)).queue();
+                default -> hook.editOriginal("An unknown error occurred while adding product `%s` to your wishlist `%s`.".formatted(
+                    productCode, wishlistName)).queue();
             }
+            return false;
         }
     }
 

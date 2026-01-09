@@ -10,7 +10,6 @@ import enterprises.iwakura.amitracker.service.InventoryService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
-import net.dv8tion.jda.api.interactions.commands.Command.Choice;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
@@ -71,7 +70,7 @@ public class InventoryRemoveCommand extends InventorySubCommand {
         String focusedOption = event.getFocusedOption().getName();
 
         if (focusedOption.equals(OPTION_PRODUCT_CODE)) {
-            event.replyChoices(inventoryService.getFilteredBoughtProductChoices(
+            event.replyChoices(inventoryService.suggestBoughtProducts(
                 user.getIdLong(), event.getFocusedOption().getValue()
             )).queue();
         }

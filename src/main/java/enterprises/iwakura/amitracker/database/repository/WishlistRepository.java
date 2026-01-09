@@ -45,7 +45,7 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
                 FROM WishlistEntity w
-                WHERE w.user.id = :userId AND w.name = :wishlistName
+                WHERE w.user.id = :userId AND LOWER(w.name) = :wishlistName
                 """;
             return session.createQuery(hql, WishlistEntity.class)
                 .setParameter("userId", userId)
@@ -66,7 +66,7 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
                 FROM WishlistEntity w
-                WHERE w.user.id = :userId AND w.name LIKE :wishlistName
+                WHERE w.user.id = :userId AND LOWER(w.name) LIKE :wishlistName
                 ORDER BY w.name ASC
                 """;
             return session.createQuery(hql, WishlistEntity.class)
@@ -87,10 +87,10 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
             var count = session.createQuery("""
                     SELECT COUNT(w)
                     FROM WishlistEntity w
-                    WHERE w.user.id = :userId AND w.name = :defaultName
+                    WHERE w.user.id = :userId AND LOWER(w.name) = :defaultName
                     """, Long.class)
                 .setParameter("userId", userId)
-                .setParameter("defaultName", Constants.DEFAULT_WISHLIST_NAME)
+                .setParameter("defaultName", Constants.DEFAULT_WISHLIST_NAME.toLowerCase())
                 .uniqueResult();
 
             if (count == null || count == 0) {
@@ -98,6 +98,45 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
                 defaultWishlist.setUser(userRepository.findById(userId).orElseThrow());
                 save(defaultWishlist);
             }
+        });
+    }
+
+    /**
+     * Checks if a product is in the specified wishlist.
+     *
+     * @param wishlistId  the ID of the wishlist
+     * @param productCode the code of the product
+     *
+     * @return true if the product is in the wishlist, false otherwise
+     */
+    public boolean isProductInWishlist(Long wishlistId, String productCode) {
+        return databaseService.runInThreadTransaction(session -> {
+            String hql = """
+                SELECT COUNT(we)
+                FROM WishlistEntryEntity we
+                WHERE we.wishlist.id = :wishlistId AND we.product.code = :productCode
+                """;
+            Long count = session.createQuery(hql, Long.class)
+                .setParameter("wishlistId", wishlistId)
+                .setParameter("productCode", productCode.toUpperCase())
+                .uniqueResult();
+            return count != null && count > 0;
+        });
+    }
+
+    /**
+     * Creates a new wishlist for the specified user with the given name.
+     *
+     * @param userId       the ID of the user
+     * @param wishlistName the name of the wishlist
+     */
+    public void createWishlist(long userId, String wishlistName) {
+        databaseService.runInThreadTransaction(session -> {
+            var wishlist = WishlistEntity.createDefault();
+            wishlist.setName(wishlistName);
+            var user = userRepository.findById(userId).orElseThrow();
+            wishlist.setUser(user);
+            save(wishlist);
         });
     }
 }

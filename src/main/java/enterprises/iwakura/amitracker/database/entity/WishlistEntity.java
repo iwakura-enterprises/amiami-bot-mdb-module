@@ -43,8 +43,6 @@ public class WishlistEntity {
     @Column(nullable = false)
     private String name;
 
-    // TODO: Ability to enable/disable notifications & checking
-
     @Column(nullable = false)
     private Boolean priceDiscountEnabled;
 
@@ -55,7 +53,7 @@ public class WishlistEntity {
     @JoinColumn(name = "user_id")
     private UserEntity user;
 
-    @OneToMany(mappedBy = "wishlist", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "wishlist")
     private List<WishlistEntryEntity> entries = new ArrayList<>();
 
     /**

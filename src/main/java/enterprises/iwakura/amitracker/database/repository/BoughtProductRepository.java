@@ -80,7 +80,7 @@ public class BoughtProductRepository extends AmiBaseRepository<BoughtProductEnti
      *
      * @return list of product entities matching the search pattern
      */
-    public List<ProductEntity> findBoughtProductCodesFiltered(long userId, String searchingProductCode, int maxElements) {
+    public List<ProductEntity> suggestBoughtProducts(long userId, String searchingProductCode, int maxElements) {
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
                 SELECT bp.product

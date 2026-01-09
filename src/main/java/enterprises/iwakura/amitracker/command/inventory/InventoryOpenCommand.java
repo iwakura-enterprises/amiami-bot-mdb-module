@@ -104,13 +104,77 @@ public class InventoryOpenCommand extends InventorySubCommand {
     private void show(User user, InteractionHook hook, int pageIndex, boolean deleteMode) {
         var interactableMessage = new InteractableMessage();
         interactableMessage.addInteractionRule(InteractionRules.allowUsers(user)); // Only allow the command user to interact
-        var addedInteractions = new AtomicBoolean(false);
         var messageBuilder = new MessageEditBuilder().useComponentsV2();
         var components = new ArrayList<ContainerChildComponent>();
+        var buttons = new ArrayList<Button>();
         components.add(TextDisplay.of("### %s's Inventory".formatted(user.getAsMention())));
         components.add(Separator.createDivider(Spacing.SMALL));
 
         var page = inventoryService.getInventoryPage(user.getIdLong(), PAGE_SIZE, pageIndex);
+
+
+        // Add Product
+        var addProductButton = interactableMessage.addInteraction(Interaction.asButton(Button.of(
+            ButtonStyle.SECONDARY, "abcd", "Add Product"
+        )), event -> {
+            Modal.Builder modalBuilder = Modal.create("abcd", "Add Product to your Inventory");
+            modalBuilder.addComponents(TextDisplay.of("Please, enter the product code of the product you wish to add to your inventory."));
+            modalBuilder.addComponents(Label.of("Product Code (gcode/scode)",
+                TextInput.create(MODAL_INPUT_PRODUCT_CODE, TextInputStyle.SHORT)
+                    .setPlaceholder("e.g., GOODS-04700698")
+                    .setRequired(true)
+                    .build())
+            );
+            modalBuilder.addComponents(Label.of("Date of Purchase (YYYY-MM-DD)",
+                TextInput.create(MODAL_INPUT_PURCHASE_DATE, TextInputStyle.SHORT)
+                    .setPlaceholder("e.g., 2026-12-31 (defaults to today)")
+                    .setRequired(false)
+                    .setMaxLength(10)
+                    .setMinLength(10)
+                    .build())
+            );
+            modalBuilder.addComponents(Label.of("Bought at Price",
+                TextInput.create(MODAL_INPUT_PRICE, TextInputStyle.SHORT)
+                    .setPlaceholder("e.g., 17600 (defaults to product's current price)")
+                    .setRequired(false)
+                    .build())
+            );
+            modalBuilder.addComponents(Label.of("Currency",
+                TextInput.create(MODAL_INPUT_CURRENCY, TextInputStyle.SHORT)
+                    .setPlaceholder("e.g., JPY (defaults to JPY; other: %s)".formatted(Currency.CHOICES_STRING))
+                    .setRequired(false)
+                    .setMaxLength(3)
+                    .build())
+            );
+
+            InteractableModal interactableModal = new InteractableModal(modalBuilder, modalEvent -> {
+                var productCode = ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_PRODUCT_CODE), null);
+                var purchaseDateString = ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_PURCHASE_DATE), null);
+                var priceDouble = Optional.ofNullable(ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_PRICE), null))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .map(NumberUtils::parseSafe)
+                    .orElse(null);
+                var currencyString = ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_CURRENCY), Currency.JPY.name());
+
+                var now = OffsetDateTime.now();
+                var purchaseDate = purchaseDateString == null ? now : OffsetDateTime.parse(purchaseDateString + "T00:00:00+00:00");
+                var currency = Currency.fromString(currencyString).orElse(null);
+
+                var modalHook = modalEvent.deferReply(true).complete();
+
+                var success = inventoryAddCommand.handleProductAdd(user, modalHook, productCode, purchaseDate, priceDouble, currency);
+                if (success) {
+                    // If user added a product for today, show first page to see it
+                    int preferredPageIndex = purchaseDate == now ? 0 : pageIndex;
+                    show(user, hook, preferredPageIndex, deleteMode);
+                }
+            });
+
+            event.replyModal(modalBuilder.build()).queue(interactableModal.registerOnCompleted());
+            return Result.KEEP;
+        });
+        buttons.add(addProductButton);
 
         if (page.getTotalElements() == 0) {
             components.add(TextDisplay.of("Your inventory is empty."));
@@ -123,7 +187,6 @@ public class InventoryOpenCommand extends InventorySubCommand {
                     SectionAccessoryComponent accessoryComponent;
 
                     if (deleteMode) {
-                        addedInteractions.set(true);
                         accessoryComponent = interactableMessage.addInteraction(Interaction.asButton(Button.of(
                             ButtonStyle.DANGER, "abcd", "Delete Product"
                         )), event -> {
@@ -165,9 +228,7 @@ public class InventoryOpenCommand extends InventorySubCommand {
 
             // Buttons at the bottom for pagination and mode switching
             // Previous Page
-            var buttons = new ArrayList<Button>();
             if (pageIndex > 0) {
-                addedInteractions.set(true);
                 var previousPage = interactableMessage.addInteraction(Interaction.asButton(Button.of(
                     ButtonStyle.PRIMARY, "abc", "Previous Page"
                 )), event -> {
@@ -182,7 +243,6 @@ public class InventoryOpenCommand extends InventorySubCommand {
 
             // Next Page
             if (page.getTotalPages() > 1 && pageIndex < page.getTotalPages() - 1) {
-                addedInteractions.set(true);
                 var nextPage = interactableMessage.addInteraction(Interaction.asButton(Button.of(
                     ButtonStyle.PRIMARY, "abc", "Next Page"
                 )), event -> {
@@ -195,72 +255,8 @@ public class InventoryOpenCommand extends InventorySubCommand {
                 buttons.add(Button.of(ButtonStyle.PRIMARY, "disabled_next", "Next Page").asDisabled());
             }
 
-            // Add Product
-            var addProductButton = interactableMessage.addInteraction(Interaction.asButton(Button.of(
-                ButtonStyle.SECONDARY, "abcd", "Add Product"
-            )), event -> {
-                Modal.Builder modalBuilder = Modal.create("abcd", "Add Product to your Inventory");
-                modalBuilder.addComponents(TextDisplay.of("Please, enter the product code of the product you wish to add to your inventory."));
-                modalBuilder.addComponents(Label.of("Product Code (gcode/scode)",
-                    TextInput.create(MODAL_INPUT_PRODUCT_CODE, TextInputStyle.SHORT)
-                        .setPlaceholder("e.g., GOODS-04700698")
-                        .setRequired(true)
-                        .build())
-                );
-                modalBuilder.addComponents(Label.of("Date of Purchase (YYYY-MM-DD)",
-                    TextInput.create(MODAL_INPUT_PURCHASE_DATE, TextInputStyle.SHORT)
-                        .setPlaceholder("e.g., 2026-12-31 (defaults to today)")
-                        .setRequired(false)
-                        .setMaxLength(10)
-                        .setMinLength(10)
-                        .build())
-                );
-                modalBuilder.addComponents(Label.of("Bought at Price",
-                    TextInput.create(MODAL_INPUT_PRICE, TextInputStyle.SHORT)
-                        .setPlaceholder("e.g., 17600 (defaults to product's current price)")
-                        .setRequired(false)
-                        .build())
-                );
-                modalBuilder.addComponents(Label.of("Currency",
-                    TextInput.create(MODAL_INPUT_CURRENCY, TextInputStyle.SHORT)
-                        .setPlaceholder("e.g., JPY (defaults to JPY; other: %s)".formatted(Currency.CHOICES_STRING))
-                        .setRequired(false)
-                        .setMaxLength(3)
-                        .build())
-                );
-
-                InteractableModal interactableModal = new InteractableModal(modalBuilder, modalEvent -> {
-                    var productCode = ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_PRODUCT_CODE), null);
-                    var purchaseDateString = ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_PURCHASE_DATE), null);
-                    var priceDouble = Optional.ofNullable(ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_PRICE), null))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .map(NumberUtils::parseSafe)
-                        .orElse(null);
-                    var currencyString = ModalUtils.getString(modalEvent.getValue(MODAL_INPUT_CURRENCY), Currency.JPY.name());
-
-                    var now = OffsetDateTime.now();
-                    var purchaseDate = purchaseDateString == null ? now : OffsetDateTime.parse(purchaseDateString + "T00:00:00+00:00");
-                    var currency = Currency.fromString(currencyString).orElse(null);
-
-                    var modalHook = modalEvent.deferReply(true).complete();
-
-                    var success = inventoryAddCommand.handleProductAdd(user, modalHook, productCode, purchaseDate, priceDouble, currency);
-                    if (success) {
-                        // If user added a product for today, show first page to see it
-                        int preferredPageIndex = purchaseDate == now ? 0 : pageIndex;
-                        show(user, hook, preferredPageIndex, deleteMode);
-                    }
-                });
-
-                event.replyModal(modalBuilder.build()).queue(interactableModal.registerOnCompleted());
-                return Result.KEEP;
-            });
-            buttons.add(addProductButton);
-
             // Mode Switch
             if (deleteMode) {
-                addedInteractions.set(true);
                 var showModeButton = interactableMessage.addInteraction(Interaction.asButton(Button.of(
                     ButtonStyle.SUCCESS, "abcd", "Show Mode"
                 )), event -> {
@@ -270,7 +266,6 @@ public class InventoryOpenCommand extends InventorySubCommand {
                 });
                 buttons.add(showModeButton);
             } else {
-                addedInteractions.set(true);
                 var deleteModeButton = interactableMessage.addInteraction(Interaction.asButton(Button.of(
                     ButtonStyle.DANGER, "abcd", "Delete Mode"
                 )), event -> {
@@ -286,10 +281,6 @@ public class InventoryOpenCommand extends InventorySubCommand {
 
         var container = Container.of(components);
         messageBuilder.setComponents(container);
-        hook.editOriginal(messageBuilder.build()).queue(success -> {
-            if (addedInteractions.get()) {
-                interactableMessage.registerNow();
-            }
-        });
+        hook.editOriginal(messageBuilder.build()).queue(interactableMessage.registerOnCompleted());
     }
 }
