@@ -78,10 +78,9 @@ public class ProductImageService {
                 // Image not in cache, check if product's image has been updated before
                 if (productRepository.hasLastImageUpdate(productCode)) {
                     // Try to get it from Akasha
-                    // TODO: Akasha API call to check if image exists
                     try {
-                        var response = akashaApiService.readProductImage(productCode, false).join();
-                        if (response == null) {
+                        var response = akashaApiService.existsProductImage(productCode).join();
+                        if (response == null || !response) {
                             throw new Exception("Image not found on Akasha");
                         }
 

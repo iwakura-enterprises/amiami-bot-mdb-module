@@ -100,10 +100,47 @@ public class AkashaApiService extends AkashaApi {
                         );
                     }
                     future.completeExceptionally(new Exception("Failed to read image from Akasha, status: " + response.getStatus()));
-                    return;
-                } else {
+                } else if (response != null) {
                     log.debug("Read image for product code {} from Akasha", productCode);
                     future.complete(response.getContent());
+                } else {
+                    future.completeExceptionally(new Exception("Failed to read image from Akasha, response is null"));
+                }
+            });
+
+        return future;
+    }
+
+    /**
+     * Checks if a product image exists in Akasha.
+     *
+     * @param productCode the product code
+     *
+     * @return a CompletableFuture containing true if the image exists, false otherwise
+     */
+    public CompletableFuture<Boolean> existsProductImage(String productCode) {
+        var future = new CompletableFuture<Boolean>();
+        var akashaConfiguration = configurationService.getAkasha();
+
+        var datasource = akashaConfiguration.getDatasource();
+        var path = constructImageUploadPath(productCode);
+
+        this.fileInfo(datasource, path)
+            .send()
+            .whenCompleteAsync((response, exception) -> {
+                if (exception != null) {
+                    log.error("Failed to check existence of image for product code {} from Akasha", productCode, exception);
+                    future.completeExceptionally(exception);
+                } else if (response != null && response.getStatus() != 200) {
+                    log.error("Failed to check existence of image for product code {} from Akasha (response: {})",
+                        productCode, response
+                    );
+                    future.completeExceptionally(new Exception("Failed to check existence of image from Akasha, status: " + response.getStatus()));
+                } else if (response != null) {
+                    log.debug("Checked existence of image for product code {} from Akasha", productCode);
+                    future.complete(response.getFileInfo() != null);
+                } else {
+                    future.completeExceptionally(new Exception("Failed to check existence of image from Akasha, response is null"));
                 }
             });
 
