@@ -9,6 +9,7 @@ import enterprises.iwakura.amitracker.database.repository.ProductRepository;
 import enterprises.iwakura.amitracker.exception.QueryFailedException;
 import enterprises.iwakura.amitracker.object.ProductChoice;
 import enterprises.iwakura.amitracker.objects.query.ProductQueryRequest;
+import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +68,7 @@ public class ProductService {
      * @return a collection of choices for product codes
      */
     public Collection<Choice> suggestProductCodes(String searchQuery) {
-        var products = productRepository.suggestProductCodesFiltered(searchQuery, OptionData.MAX_CHOICE_NAME_LENGTH);
+        var products = productRepository.suggestProductCodesFiltered(URLHelper.extractProductCode(searchQuery), OptionData.MAX_CHOICE_NAME_LENGTH);
         return products.stream()
             .map(product -> new ProductChoice(product).toChoice())
             .toList();

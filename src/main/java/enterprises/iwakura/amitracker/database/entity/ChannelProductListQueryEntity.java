@@ -37,6 +37,9 @@ public class ChannelProductListQueryEntity {
     private OffsetDateTime updatedAt;
 
     @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false)
     private Boolean priceDiscountEnabled;
 
     @Column(nullable = false)

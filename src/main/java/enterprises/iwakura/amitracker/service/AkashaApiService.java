@@ -1,6 +1,5 @@
 package enterprises.iwakura.amitracker.service;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.gson.Gson;

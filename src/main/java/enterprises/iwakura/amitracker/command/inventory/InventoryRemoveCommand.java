@@ -8,6 +8,7 @@ import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.InventoryService;
 import enterprises.iwakura.amitracker.service.UserService;
+import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -54,6 +55,8 @@ public class InventoryRemoveCommand extends InventorySubCommand {
         if (guild != null) {
             guildService.getOrCreateGuild(guild);
         }
+
+        productCode = URLHelper.extractProductCode(productCode);
 
         boolean removed = inventoryService.removeProductFromInventory(user.getIdLong(), productCode);
 

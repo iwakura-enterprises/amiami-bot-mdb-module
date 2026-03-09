@@ -7,6 +7,9 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class ReleaseDateParser {
 
+    public static final String EARLY_STRING = "early";
+    public static final String LATE_STRING = "late";
+
     /**
      * Parses a release date string in the format "MMM-YYYY" (e.g., "Jan-2024") into a LocalDate.
      * If the input is null, blank, or not in the expected format, returns null.
@@ -25,8 +28,21 @@ public class ReleaseDateParser {
         if (parts.length == 2) {
             String monthStr = parts[0];
             String yearStr = parts[1];
+            int preferredDay = 15; // Default to mid-month
+
+            if (monthStr.contains(" ")) {
+                var monthParts = monthStr.split(" ");
+                monthStr = monthParts[monthParts.length - 1];
+
+                if (monthParts[0].equalsIgnoreCase(EARLY_STRING)) {
+                    preferredDay = 5;
+                } else if (monthParts[0].equalsIgnoreCase(LATE_STRING)) {
+                    preferredDay = 25;
+                }
+            }
+
             try {
-                int month = switch (monthStr) {
+                int month = switch (StringUtils.capitalize(monthStr)) {
                     case "Jan" -> 1;
                     case "Feb" -> 2;
                     case "Mar" -> 3;
@@ -45,7 +61,7 @@ public class ReleaseDateParser {
                     return null;
                 }
                 int year = Integer.parseInt(yearStr);
-                return LocalDate.of(year, month, 1); // Set day to 1
+                return LocalDate.of(year, month, preferredDay); // Set day to 1
             } catch (NumberFormatException e) {
                 return null;
             }

@@ -9,6 +9,7 @@ import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.repository.BoughtProductRepository;
 import enterprises.iwakura.amitracker.object.Page;
 import enterprises.iwakura.amitracker.object.ProductChoice;
+import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -83,7 +84,7 @@ public class InventoryService {
      * @return List of matching product codes
      */
     public List<Choice> suggestBoughtProducts(long userId, String searchingProductCode) {
-        var products = boughtProductRepository.suggestBoughtProducts(userId, searchingProductCode, OptionData.MAX_CHOICE_NAME_LENGTH);
+        var products = boughtProductRepository.suggestBoughtProducts(userId, URLHelper.extractProductCode(searchingProductCode), OptionData.MAX_CHOICE_NAME_LENGTH);
         return products.stream()
             .map(product -> new ProductChoice(product).toChoice())
             .toList();

@@ -9,6 +9,7 @@ import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.service.WishlistService;
+import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -56,6 +57,8 @@ public class WishlistRemoveCommand extends WishlistSubCommand {
             hook.editOriginal("Product code is required").queue();
             return;
         }
+
+        productCode = URLHelper.extractProductCode(productCode);
 
         userService.getOrCreateUser(user);
         if (guild != null) {

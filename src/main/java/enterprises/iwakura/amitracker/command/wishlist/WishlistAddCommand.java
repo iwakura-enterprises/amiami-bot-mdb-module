@@ -10,6 +10,7 @@ import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.ProductService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.service.WishlistService;
+import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
@@ -56,11 +57,6 @@ public class WishlistAddCommand extends WishlistSubCommand {
 
         var hook = event.deferReply(true).complete();
 
-        if (productCode == null || productCode.isBlank()) {
-            hook.editOriginal("Product code is required").queue();
-            return;
-        }
-
         userService.getOrCreateUser(user);
         if (guild != null) {
             guildService.getOrCreateGuild(guild);
@@ -71,6 +67,13 @@ public class WishlistAddCommand extends WishlistSubCommand {
     }
 
     public boolean handleProductAdd(User user, InteractionHook hook, String wishlistName, String productCode) {
+        if (productCode == null || productCode.isBlank()) {
+            hook.editOriginal("Product code is required").queue();
+            return false;
+        }
+
+        productCode = URLHelper.extractProductCode(productCode);
+
         var errorContext = wishlistService.addProductToWishlist(user.getIdLong(), wishlistName, productCode);
 
         if (errorContext.isSuccess()) {

@@ -14,6 +14,7 @@ import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.InventoryService;
 import enterprises.iwakura.amitracker.service.ProductService;
 import enterprises.iwakura.amitracker.service.UserService;
+import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.User;
@@ -80,23 +81,7 @@ public class InventoryAddCommand extends InventorySubCommand {
             : OffsetDateTime.parse(purchaseDateString + "T00:00:00+00:00");
         var currencyString = event.getOption(OPTION_CURRENCY, Constants.DEFAULT_CURRENCY.name(),
             OptionMapping::getAsString);
-        var currency = Currency.fromString(currencyString);
-
-        // TODO: Better handling and validation
-        if (productCode == null) {
-            event.reply("Product code is required").setEphemeral(true).queue();
-            return;
-        }
-
-        if (price != null && price < 0) {
-            event.reply("Price must be a positive number").setEphemeral(true).queue();
-            return;
-        }
-
-        if (currency.isEmpty()) {
-            event.reply("Invalid currency").setEphemeral(true).queue();
-            return;
-        }
+        var currency = Currency.fromString(currencyString).orElse(null);
 
         var hook = event.deferReply(true).complete();
 
@@ -105,7 +90,7 @@ public class InventoryAddCommand extends InventorySubCommand {
             guildService.getOrCreateGuild(guild);
         }
 
-        handleProductAdd(user, hook, productCode, purchaseDate, price, currency.get());
+        handleProductAdd(user, hook, productCode, purchaseDate, price, currency);
     }
 
     public boolean handleProductAdd(User user, InteractionHook hook, String productCode, OffsetDateTime purchaseDate, Double price, Currency currency) {
@@ -124,6 +109,7 @@ public class InventoryAddCommand extends InventorySubCommand {
             return false;
         }
 
+        productCode = URLHelper.extractProductCode(productCode);
 
         if (inventoryService.hasUserBoughtProduct(user.getIdLong(), productCode)) {
             // TODO: Show interactive message to confirm update

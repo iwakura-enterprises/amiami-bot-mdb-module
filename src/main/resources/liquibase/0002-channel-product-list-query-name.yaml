@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0002-channel-product-list-query-name
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: channel_product_list_query
+            columns:
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: true
