@@ -45,6 +45,12 @@ public class ProductListQueryEntity {
     @Column(nullable = false)
     private Integer maxPagination;
 
+    /**
+     * Whenever the next product added/removed to list changes should be ignored. Usually used when changing the
+     * max pagination.
+     */
+    private boolean skipNextProductAddOrRemoveChangeAnnouncements;
+
     // Search params
     private String searchKeywords;
     private Boolean filterAnyAvailability;

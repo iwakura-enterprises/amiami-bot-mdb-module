@@ -6,11 +6,11 @@ import com.jagrosh.jdautilities.command.CommandClientBuilder;
 
 import enterprises.iwakura.amitracker.command.AmiTrackerCommand;
 import enterprises.iwakura.amitracker.command.SubCommand;
-import enterprises.iwakura.amitracker.service.AkashaApiService;
 import enterprises.iwakura.amitracker.service.AmiAmiQueryService;
 import enterprises.iwakura.amitracker.service.ConfigurationService;
 import enterprises.iwakura.amitracker.service.DatabaseService;
-import enterprises.iwakura.amitracker.service.ProductImageService;
+import enterprises.iwakura.amitracker.service.ProductChangeAnnounceService;
+import enterprises.iwakura.amitracker.service.scheduler.BaseScheduler;
 import enterprises.iwakura.amitracker.service.scheduler.ProductQueryScheduler;
 import enterprises.iwakura.ganyu.Ganyu;
 import enterprises.iwakura.ganyu.GanyuCommand;
@@ -25,16 +25,17 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class AmiTracker extends Module {
 
+    public static final String AMI_AMI_IMAGE_URL = "https://img.amiami.com/%s";
+    public static final String IMAGE_NOT_FOUND_URL = "https://goddrinksjava.net/akasha/data-source/hetzner/public/amitracker/product/404.png";
+
     private final ConfigurationService configurationService;
     private final DatabaseService databaseService;
     private final AmiAmiQueryService amiAmiQueryService;
-    private final AkashaApiService akashaApiService;
-    private final ProductImageService productImageService;
-
-    private final ProductQueryScheduler productQueryScheduler;
+    private final ProductChangeAnnounceService productChangeAnnounceService;
 
     private final List<AmiTrackerCommand> discordCommands;
     private final List<GanyuCommand> consoleCommands;
+    private final List<BaseScheduler> baseSchedulers;
 
     @Override
     public void onEnable() {
@@ -50,10 +51,9 @@ public class AmiTracker extends Module {
 
         configurationService.init(this.getModuleDirectoryPath());
         databaseService.initialize();
-        akashaApiService.init();
         amiAmiQueryService.init();
-        productImageService.init();
-        productQueryScheduler.initialize();
+        productChangeAnnounceService.init();
+        baseSchedulers.forEach(BaseScheduler::initialize);
 
         log.info("{} started in {} ms", info.getName(), System.currentTimeMillis() - startMillis);
     }

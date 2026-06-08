@@ -1,5 +1,7 @@
 package enterprises.iwakura.amitracker.database.repository;
 
+import enterprises.iwakura.amitracker.constant.ProductState;
+import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductHistoryEntity;
 import enterprises.iwakura.amitracker.service.DatabaseService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
@@ -24,5 +26,15 @@ public class ProductHistoryRepository extends AmiBaseRepository<ProductHistoryEn
     @Override
     protected boolean hasId(ProductHistoryEntity productHistoryEntity) {
         return productHistoryEntity.getId() != null;
+    }
+
+    public ProductHistoryEntity addNewHistory(ProductEntity productEntity, long newPriceJpy, ProductState newProductState) {
+        return databaseService.runInThreadTransaction(session -> {
+            var productHistory = new ProductHistoryEntity();
+            productHistory.setPriceJpy(newPriceJpy);
+            productHistory.setProductState(newProductState);
+            productHistory.setProduct(productEntity);
+            return save(productHistory);
+        });
     }
 }

@@ -12,13 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ConcurrencyService {
 
-    private final Executor akashaImageFetchExecutor = Executors.newCachedThreadPool();
     private final Executor queryExecutor = Executors.newFixedThreadPool(8);
     private final Executor commandExecutor = Executors.newCachedThreadPool();
-
-    public void scheduleAkashaImageFetch(Runnable runnable) {
-        akashaImageFetchExecutor.execute(runSafe(runnable, "AkashaImageFetch"));
-    }
 
     public void scheduleQuery(Runnable runnable) {
         queryExecutor.execute(runSafe(runnable, "Query"));

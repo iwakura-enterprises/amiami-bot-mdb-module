@@ -50,6 +50,28 @@ public class ProductRepository extends AmiBaseRepository<ProductEntity, Long> {
     }
 
     /**
+     * Finds products by their codes.
+     *
+     * @param productCodes the list of product codes
+     *
+     * @return a list of product entities matching the given codes
+     */
+    public List<ProductEntity> findByCodes(List<String> productCodes) {
+        if (productCodes == null || productCodes.isEmpty()) {
+            return List.of();
+        }
+        return databaseService.runInThreadTransaction(session -> {
+            var hql = """
+            FROM ProductEntity p
+            WHERE p.code IN :productCodes
+            """;
+            var query = session.createQuery(hql, ProductEntity.class);
+            query.setParameter("productCodes", productCodes.stream().map(String::toUpperCase).toList());
+            return query.getResultList();
+        });
+    }
+
+    /**
      * Updates the last image update date for a product.
      *
      * @param productCode the product code
@@ -102,13 +124,38 @@ public class ProductRepository extends AmiBaseRepository<ProductEntity, Long> {
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
                 FROM ProductEntity p
-                WHERE p.code LIKE :searchPattern
+                WHERE p.code ILIKE :searchPattern OR p.name ILIKE :searchPattern
                 ORDER BY p.code ASC
                 """;
             return session.createQuery(hql, ProductEntity.class)
                 .setParameter("searchPattern", "%" + searchQuery.toUpperCase() + "%")
                 .setMaxResults(maxElements)
                 .getResultList();
+        });
+    }
+
+    /**
+     * Finds product codes that do not exist in the database yet.
+     *
+     * @param productCodes Product codes to check against
+     *
+     * @return List of product codes not present in the database
+     */
+    public List<String> findNewProductCodes(List<String> productCodes) {
+        if (productCodes == null || productCodes.isEmpty()) {
+            return List.of();
+        }
+        return databaseService.runInThreadTransaction(session -> {
+            var sql = """
+            SELECT unnest(CAST(:productCodes AS text[]))
+            EXCEPT
+            SELECT p.code
+            FROM product p
+            WHERE p.code = ANY(CAST(:productCodes AS text[]))
+            """;
+            return session.createNativeQuery(sql, String.class)
+                .setParameter("productCodes", productCodes.toArray(String[]::new))
+                .list();
         });
     }
 }

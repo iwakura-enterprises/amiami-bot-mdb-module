@@ -28,7 +28,7 @@ configurations.all {
 
 dependencies {
     // JDA
-    compileOnly 'net.dv8tion:JDA:6.2.0'
+    compileOnly 'net.dv8tion:JDA:6.4.1'
 
     // Chewtils
     compileOnly 'pw.chew:jda-chewtils:2.1'
@@ -45,7 +45,7 @@ dependencies {
     compileOnly 'org.apache.logging.log4j:log4j-core:2.23.1'
 
     // Personal libraries
-    compileOnly 'enterprises.iwakura:modular-discord-bot:3.5.1'
+    compileOnly 'enterprises.iwakura:modular-discord-bot:3.5.2'
     compileOnly 'enterprises.iwakura:jda-interactables:2.2.0'
     amber 'enterprises.iwakura:irminsul:0.2.2'
     compileOnly 'dev.mayuna:mayus-library:3.1'
@@ -56,9 +56,9 @@ dependencies {
     compileOnly 'enterprises.iwakura:keqing-snakeyaml:1.1.1'
     compileOnly 'enterprises.iwakura:jean-core:1.1.1'
     compileOnly 'enterprises.iwakura:jean-gson:1.1.1'
+    compileOnly 'enterprises.iwakura:cirno:1.0.1'
 
     amber "enterprises.iwakura:amiami-api-kirara:1.2.0"
-    amber 'enterprises.iwakura:akasha-api-kirara:1.3.1'
     amber "enterprises.iwakura:kirara-httpclient:1.4.1"
     amber "enterprises.iwakura:kirara-core:1.4.1"
     amber "enterprises.iwakura:kirara-gson:1.4.1"
@@ -132,6 +132,8 @@ tasks.register('copyJarToModules') {
         }
     }
 }
+
+copyJarToModules.dependsOn shadowJar
 
 task javadocJar(type: Jar) {
     from javadoc

@@ -2,6 +2,8 @@ package enterprises.iwakura.amitracker.service.scheduler;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import lombok.extern.slf4j.Slf4j;
@@ -9,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public abstract class BaseScheduler {
 
-    protected final Timer timer = new Timer();
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     /**
      * Schedules a recurring task with the specified parameters.
@@ -23,18 +25,14 @@ public abstract class BaseScheduler {
     protected void schedule(String name, long delay, long period, TimeUnit timeUnit, Runnable task) {
         long delayMs = timeUnit.toMillis(delay);
         long periodMs = timeUnit.toMillis(period);
-        log.info("Scheduling '{}' to run every {} {} after an initial delay of {} {}",
-            name, period, timeUnit, delay, timeUnit);
-        timer.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    task.run();
-                } catch (Exception e) {
-                    log.error("Error occurred while executing scheduled task '{}': {}", name, e.getMessage(), e);
-                }
+        log.info("Scheduling '{}' to run every {} {} after an initial delay of {} {}", name, period, timeUnit, delay, timeUnit);
+        executor.scheduleWithFixedDelay(() -> {
+            try {
+                task.run();
+            } catch (Exception e) {
+                log.error("Error occurred while executing scheduled task '{}': {}", name, e.getMessage(), e);
             }
-        }, delayMs, periodMs);
+        }, delayMs, periodMs, TimeUnit.MILLISECONDS);
     }
 
     /**

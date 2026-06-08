@@ -5,3 +5,9 @@ databaseChangeLog:
   - include:
       file: 0002-channel-product-list-query-name.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0003-product-change-announcement.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 0004-product-change-types-to-jsonb.yaml
+      relativeToChangelogFile: true

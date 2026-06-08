@@ -100,6 +100,7 @@ public class AmiAmiQueryService {
         var future = new CompletableFuture<AmiAmiItemResponse>();
 
         executor.execute(() -> {
+            // TODO: Synchronize
             // Check if recently queried
             var recentResponse = itemResponseCache.getIfPresent(queryRequest.getProductCode());
             if (recentResponse != null) {
@@ -123,33 +124,6 @@ public class AmiAmiQueryService {
                             queryRequest.getProductCode()), exception)
                     );
                 }
-            }
-        });
-
-        return future;
-    }
-
-    /**
-     * Schedules an image query to be performed in the background.
-     *
-     * @param imageUrl The URL of the image to query.
-     *
-     * @return A CompletableFuture that will complete with the image data as a byte array.
-     */
-    public CompletableFuture<byte[]> queryImage(String imageUrl) {
-        var future = new CompletableFuture<byte[]>();
-
-        executor.execute(() -> {
-            try {
-                var imageData = performNonAmiResponseQuery(() ->
-                    amiAmiApiService.getImage(imageUrl).send().join()
-                );
-                future.complete(imageData);
-            } catch (Exception exception) {
-                future.completeExceptionally(
-                    new QueryFailedException("Failed to query image from URL %s".formatted(
-                        imageUrl), exception)
-                );
             }
         });
 

@@ -8,12 +8,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
+import enterprises.iwakura.amitracker.AmiTracker;
 import enterprises.iwakura.amitracker.constant.Currency;
 import enterprises.iwakura.amitracker.service.AmiAmiApiService;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.InventoryService;
-import enterprises.iwakura.amitracker.service.ProductImageService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.util.ModalUtils;
 import enterprises.iwakura.amitracker.util.NumberUtils;
@@ -60,7 +60,6 @@ public class InventoryOpenCommand extends InventorySubCommand {
     private final InventoryService inventoryService;
     private final UserService userService;
     private final GuildService guildService;
-    private final ProductImageService productImageService;
     private final AmiAmiApiService amiAmiApiService;
 
     private final InventoryAddCommand inventoryAddCommand;
@@ -68,14 +67,13 @@ public class InventoryOpenCommand extends InventorySubCommand {
     public InventoryOpenCommand(
         ConcurrencyService concurrencyService, InventoryService inventoryService,
         UserService userService,
-        GuildService guildService, ProductImageService productImageService, AmiAmiApiService amiAmiApiService,
+        GuildService guildService, AmiAmiApiService amiAmiApiService,
         InventoryAddCommand inventoryAddCommand
     ) {
         super(concurrencyService);
         this.inventoryService = inventoryService;
         this.userService = userService;
         this.guildService = guildService;
-        this.productImageService = productImageService;
         this.amiAmiApiService = amiAmiApiService;
         this.inventoryAddCommand = inventoryAddCommand;
         this.name = "open";
@@ -204,16 +202,15 @@ public class InventoryOpenCommand extends InventorySubCommand {
                         });
                     } else {
                         try {
-                            var imageUrl = productImageService.fetchImageUrl(product.getImageUrl()).join();
-                            accessoryComponent = Thumbnail.fromUrl(imageUrl);
+                            accessoryComponent = Thumbnail.fromUrl(AmiTracker.AMI_AMI_IMAGE_URL.formatted(product.getImageUrl()));
                         } catch (Exception exception) {
-                            accessoryComponent = Thumbnail.fromUrl(ProductImageService.DEFAULT_IMAGE_URL);
+                            accessoryComponent = Thumbnail.fromUrl(AmiTracker.IMAGE_NOT_FOUND_URL);
                         }
                     }
 
                     return Section.of(
                         accessoryComponent,
-                        TextDisplay.of("**%s** [link](%s)".formatted(StringUtils.maxLength(product.getName(), 150), amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()))),
+                        TextDisplay.of("[**%s**](%s)".formatted(StringUtils.maxLength(product.getName(), 150), amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()))),
                         TextDisplay.of("├  Bought on <t:%d:D>\n├  For price of **%s %s**\n└  `%s`".formatted(boughtProduct.getBoughtAt().toEpochSecond(), boughtProduct.getPriceJpy(), Currency.JPY.getSymbol(), product.getCode()))
                     );
                 })

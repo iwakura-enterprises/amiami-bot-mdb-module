@@ -1,0 +1,88 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0003-product-change-announcement-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: product_query
+            columns:
+              - column:
+                  name: skipNextProductAddOrRemoveChangeAnnouncements
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: 0003-product-change-announcement-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: product_change_announcement
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_product_change_announcement
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  name: announcementState
+                  type: VARCHAR(255)
+              - column:
+                  name: sendLog
+                  type: TEXT
+              - column:
+                  name: productChangeTypes
+                  type: text[]
+              - column:
+                  name: product_id
+                  type: BIGINT
+              - column:
+                  name: wishlist_id
+                  type: BIGINT
+              - column:
+                  name: channelProductListQueryEntity_id
+                  type: BIGINT
+              - column:
+                  name: productChangeHolder
+                  type: JSONB
+  - changeSet:
+      id: 0003-product-change-announcement-3
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: product_id
+            baseTableName: product_change_announcement
+            constraintName: FK_PRODUCT_CHANGE_ANNOUNCEMENT_ON_PRODUCT
+            referencedColumnNames: id
+            referencedTableName: product
+  - changeSet:
+      id: 0003-product-change-announcement-4
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: wishlist_id
+            baseTableName: product_change_announcement
+            constraintName: FK_PRODUCT_CHANGE_ANNOUNCEMENT_ON_WISHLIST
+            referencedColumnNames: id
+            referencedTableName: wishlist
+  - changeSet:
+      id: 0003-product-change-announcement-5
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: channelProductListQueryEntity_id
+            baseTableName: product_change_announcement
+            constraintName: FK_PRODUCT_CHANGE_ANNOUNCEMENT_ON_CHANNEL_PLQ
+            referencedColumnNames: id
+            referencedTableName: channel_product_list_query

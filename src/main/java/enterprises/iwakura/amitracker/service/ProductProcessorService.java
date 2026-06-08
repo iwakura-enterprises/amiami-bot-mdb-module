@@ -1,17 +1,29 @@
 package enterprises.iwakura.amitracker.service;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
+import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
+import enterprises.iwakura.amitracker.database.repository.ProductListQueryRepository;
+import enterprises.iwakura.amitracker.database.repository.ProductQueryResultEntryRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
+import enterprises.iwakura.amitracker.object.ProductChangeHolder;
+import enterprises.iwakura.amitracker.service.scheduler.ProductQueryScheduler;
 import enterprises.iwakura.amitracker.util.ReleaseDateParser;
 import enterprises.iwakura.kirara.amiami.response.AmiAmiItemResponse;
 import enterprises.iwakura.kirara.amiami.response.AmiAmiItemResponse.Item;
 import enterprises.iwakura.kirara.amiami.response.AmiAmiSearchResponse;
+import enterprises.iwakura.kirara.amiami.response.AmiAmiSearchResponse.ResultItem;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
+import enterprises.iwakura.sigewine.core.utils.BeanAccessor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -22,21 +34,139 @@ public class ProductProcessorService {
 
     private final DatabaseService databaseService;
     private final ProductHistoryService productHistoryService;
-    private final ProductImageService productImageService;
 
     private final ProductRepository productRepository;
+    private final ProductListQueryRepository productListQueryRepository;
+    private final ProductQueryResultEntryRepository productQueryResultEntryRepository;
+    private final ProductChangeAnnounceService productChangeAnnounceService;
 
-    public void process(List<AmiAmiSearchResponse> searchResponses) {
-        log.info("Processing search responses: {}", searchResponses);
-        // TODO:
-        //  - Get previous results from DB
-        //  - Compare with new results
-        //    - New items -> if on first page, classify as new item
-        //    - Status changes
-        //    - If removed - Fetch details to confirm removal.
-        //      - If no changes, somehow tell to not track again (e.g. outside of the search results?)
-        //      - Update DB with new results, if any -> update
-        //  - Always for all fetched items create ProductEntity and for existing product the price history entry.
+    @Bean
+    private final BeanAccessor<ProductQueryScheduler> productQuerySchedulerBeanAccessor = new BeanAccessor<>(
+        ProductQueryScheduler.class);
+
+    public void process(ProductListQueryEntity productListQueryEntity, List<AmiAmiSearchResponse> searchResponses) {
+        databaseService.runInThreadTransaction(session -> {
+            if (searchResponses.isEmpty()) {
+                log.warn("Ignoring empty search response");
+                return;
+            }
+            log.info("Processing {} search responses", searchResponses.size());
+
+            var resultItemByCode = searchResponses.stream()
+                .flatMap(response -> response.getItems().stream())
+                .collect(Collectors.toMap(ResultItem::getGCode, Function.identity()));
+            var productCodes = resultItemByCode.values().stream()
+                .map(ResultItem::getGCode)
+                .toList();
+
+            var newProductCodesInListQuery = productListQueryRepository.findNewProductCodes(productListQueryEntity.getId(),
+                productCodes);
+            var removedProductCodesFromListQuery = productListQueryRepository.findRemovedProductCodes(
+                productListQueryEntity.getId(), productCodes);
+
+            if (!newProductCodesInListQuery.isEmpty()) {
+                log.info("Found new product codes for product list query {}: {}",
+                    productListQueryEntity.getId(), newProductCodesInListQuery
+                );
+
+                var nonExistingProductCodes = productRepository.findNewProductCodes(newProductCodesInListQuery);
+                var existingProductCodes = newProductCodesInListQuery.stream()
+                    .filter(it -> !nonExistingProductCodes.contains(it)).toList();
+
+                nonExistingProductCodes.forEach(newProductCode -> {
+                    var resultItem = resultItemByCode.get(newProductCode);
+
+                    if (resultItem != null) {
+                        // Create new product & add it to the product list query entity
+                        var productEntity = createProductFromResultItem(resultItem);
+                        productQueryResultEntryRepository.createFor(productListQueryEntity, productEntity);
+
+                        if (!productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
+                            productChangeAnnounceService.scheduleProductAddedInList(productListQueryEntity, productEntity);
+                        } else {
+                            //noinspection LoggingSimilarMessage
+                            log.warn("Skipping new product announcement for product code {} in product list {}",
+                                productEntity.getCode(), productListQueryEntity.getId()
+                            );
+                        }
+                    } else {
+                        log.error(
+                            "This should not happen! Result item not found from newProductCode {} when adding products to"
+                                + " a list {}",
+                            newProductCode, productListQueryEntity.getId()
+                        );
+                    }
+                });
+
+                // Fetch existing product entities
+                if (!existingProductCodes.isEmpty()) {
+                    productRepository.findByCodes(existingProductCodes).forEach(productEntity -> {
+                        var resultItem = resultItemByCode.get(productEntity.getCode());
+
+                        // Add the product into the product list query entity
+                        productQueryResultEntryRepository.createFor(productListQueryEntity, productEntity);
+
+                        if (resultItem != null) {
+                            if (!productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
+                                productChangeAnnounceService.scheduleProductAddedInList(productListQueryEntity, productEntity);
+                            } else {
+                                //noinspection LoggingSimilarMessage
+                                log.warn("Skipping new product announcement for product code {} in product list {}",
+                                    productEntity.getCode(), productListQueryEntity.getId()
+                                );
+                            }
+
+                            // Update existing product and check for changes
+                            checkChangesAndUpdateAndAnnounce(productEntity, resultItem.getMinimumPriceJpy(),
+                                ProductState.parse(resultItem));
+                        } else {
+                            log.error(
+                                "This should not happen! Result item not found from ProductEntity code {} when adding products to a list {}",
+                                productEntity.getCode(), productListQueryEntity.getId()
+                            );
+                        }
+                    });
+                }
+            }
+
+            // Updates products already in the list and are not new
+            // Must exist in the product table as it is linked with this ProductListQueryEntity
+            var remainingProductCodes = productCodes.stream()
+                .filter(item -> !newProductCodesInListQuery.contains(item))
+                .toList();
+            if (!remainingProductCodes.isEmpty()) {
+                productRepository.findByCodes(remainingProductCodes).forEach(productEntity -> {
+                    var resultItem = resultItemByCode.get(productEntity.getCode());
+
+                    if (resultItem != null) {
+                        // Update existing product entity & check for changes
+                        checkChangesAndUpdateAndAnnounce(productEntity, resultItem.getMinimumPriceJpy(),
+                            ProductState.parse(resultItem));
+                    } else {
+                        log.error(
+                            "This should not happen! Result item not found from ProductEntity code {} when updating remaining products",
+                            productEntity.getCode());
+                    }
+                });
+            }
+
+            // TODO: Protect against empty productCodes, prevent fetching all products out of a sudden?
+            // These product codes where in the list previously but now they are removed.
+            // Fetch them standalone and check their status & update
+            if (!productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
+                removedProductCodesFromListQuery.forEach(productCode ->
+                    productQuerySchedulerBeanAccessor.getBeanInstance().runProductQuery(productCode));
+            }
+
+            // Remove them so they are not queried again
+            productListQueryRepository.removeResultEntriesByProductCodes(productListQueryEntity.getId(), removedProductCodesFromListQuery);
+
+            if (productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
+                log.info("The next product list query process for ID {} will announce new/removed products", productListQueryEntity.getId());
+                productListQueryEntity.setSkipNextProductAddOrRemoveChangeAnnouncements(false);
+                productListQueryRepository.save(productListQueryEntity);
+            }
+        });
     }
 
     /**
@@ -61,7 +191,7 @@ public class ProductProcessorService {
             var existingProduct = optionalExistingProduct.get();
 
             // Update existing product entity & check for changes
-            // TODO
+            checkChangesAndUpdateAndAnnounce(existingProduct, item.getPriceJpy(), ProductState.parse(item));
 
             existingProduct.setUpdatedAt(OffsetDateTime.now());
             productRepository.save(existingProduct);
@@ -69,8 +199,66 @@ public class ProductProcessorService {
         } else {
             // Create new product
             // No need to send any notifications here, as this product
-            // should not have any wishlists yet.
+            // should not have any wishlists or product list queries yet.
             return Optional.of(createProductFromItem(item));
+        }
+    }
+
+    /**
+     * Checks if specified attributes have changed on the product. If so, updates it and schedules an announcement for
+     * that
+     *
+     * @param productEntity   Product entity
+     * @param newPriceJpy     New price in JPY
+     * @param newProductState New product state
+     */
+    public void checkChangesAndUpdateAndAnnounce(
+        ProductEntity productEntity,
+        long newPriceJpy,
+        ProductState newProductState
+    ) {
+        final var oldPriceJpy = productEntity.getPriceJpy();
+        final var oldProductState = productEntity.getProductState();
+
+        boolean priceChanged = !Objects.equals(oldPriceJpy, newPriceJpy);
+        boolean priceHasDiscount = newPriceJpy < oldPriceJpy;
+        boolean productStateChanged = !Objects.equals(oldProductState, newProductState);
+        List<ProductChangeType> productChangeTypes = new ArrayList<>();
+
+        if (productStateChanged) {
+            productChangeTypes.add(ProductChangeType.PRODUCT_STATE_CHANGED);
+        }
+        if (priceHasDiscount) {
+            productChangeTypes.add(ProductChangeType.PRICE_DISCOUNT);
+        }
+
+        // Save even if price is not of discount
+        if (productStateChanged || priceChanged) {
+            // Add history
+            productHistoryService.addNewHistory(productEntity, newPriceJpy, newProductState);
+
+            // Update values
+            productEntity.setPriceJpy(newPriceJpy);
+            productEntity.setProductState(newProductState);
+            productRepository.save(productEntity);
+        }
+
+        if (!productChangeTypes.isEmpty()) {
+            log.info("Product {} has some changed tracked attribute (price {} -> {}, state {} -> {}), resolved as {}",
+                productEntity.getCode(),
+                oldPriceJpy, newPriceJpy,
+                oldProductState, newProductState,
+                productChangeTypes
+            );
+
+            productChangeAnnounceService.schedule(
+                productEntity,
+                productChangeTypes,
+                ProductChangeHolder.builder()
+                    .oldPriceJpy(oldPriceJpy).newPriceJpy(newPriceJpy)
+                    .oldProductState(oldProductState).newProductState(newProductState)
+                    .build()
+            );
         }
     }
 
@@ -82,7 +270,7 @@ public class ProductProcessorService {
      * @return the created ProductEntity
      */
     private ProductEntity createProductFromItem(Item item) {
-        var newSavedProduct = databaseService.runInThreadTransaction(session -> {
+        return databaseService.runInThreadTransaction(session -> {
             var product = new ProductEntity();
             product.setCode(item.getGCode());
             product.setName(item.getName());
@@ -95,8 +283,28 @@ public class ProductProcessorService {
             productHistoryService.initialize(savedProduct);
             return savedProduct;
         });
-        // Caches the image URL asynchronously
-        productImageService.fetchImageUrl(newSavedProduct.getImageUrl());
-        return newSavedProduct;
+    }
+
+    /**
+     * Creates a new ProductEntity from the given AmiAmi search result item.
+     *
+     * @param resultItem The AmiAmi search result item
+     *
+     * @return The created ProductEntity
+     */
+    private ProductEntity createProductFromResultItem(ResultItem resultItem) {
+        return databaseService.runInThreadTransaction(session -> {
+            var product = new ProductEntity();
+            product.setCode(resultItem.getGCode());
+            product.setName(resultItem.getGName());
+            product.setImageUrl(resultItem.getThumbnailUrl());
+            product.setPriceJpy(resultItem.getMinimumPriceJpy());
+            product.setMakerName(resultItem.getMakerName());
+            product.setProductState(ProductState.parse(resultItem));
+            product.setReleaseDate(ReleaseDateParser.parseNormal(resultItem.getReleaseDate()));
+            var savedProduct = productRepository.save(product);
+            productHistoryService.initialize(savedProduct);
+            return savedProduct;
+        });
     }
 }

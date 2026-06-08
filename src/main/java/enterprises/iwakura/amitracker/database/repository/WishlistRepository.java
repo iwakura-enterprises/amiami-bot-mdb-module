@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import enterprises.iwakura.amitracker.constant.Constants;
+import enterprises.iwakura.amitracker.constant.ProductChangeType;
+import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.WishlistEntity;
 import enterprises.iwakura.amitracker.service.DatabaseService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
@@ -44,9 +46,9 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
     public Optional<WishlistEntity> findByUserIdAndName(long userId, String wishlistName) {
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
-                FROM WishlistEntity w
-                WHERE w.user.id = :userId AND LOWER(w.name) = :wishlistName
-                """;
+                         FROM WishlistEntity w
+                         WHERE w.user.id = :userId AND LOWER(w.name) = :wishlistName
+                         """;
             return session.createQuery(hql, WishlistEntity.class)
                 .setParameter("userId", userId)
                 .setParameter("wishlistName", wishlistName.toLowerCase())
@@ -65,10 +67,10 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
     public List<WishlistEntity> suggestWishlistNamesForUser(long userId, String wishlistName) {
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
-                FROM WishlistEntity w
-                WHERE w.user.id = :userId AND LOWER(w.name) LIKE :wishlistName
-                ORDER BY w.name ASC
-                """;
+                         FROM WishlistEntity w
+                         WHERE w.user.id = :userId AND LOWER(w.name) LIKE :wishlistName
+                         ORDER BY w.name ASC
+                         """;
             return session.createQuery(hql, WishlistEntity.class)
                 .setParameter("userId", userId)
                 .setParameter("wishlistName", wishlistName.toLowerCase() + "%")
@@ -85,10 +87,10 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
     public void ensureDefaultWishlistExistsForUser(long userId) {
         databaseService.runInThreadTransaction(session -> {
             var count = session.createQuery("""
-                    SELECT COUNT(w)
-                    FROM WishlistEntity w
-                    WHERE w.user.id = :userId AND LOWER(w.name) = :defaultName
-                    """, Long.class)
+                                            SELECT COUNT(w)
+                                            FROM WishlistEntity w
+                                            WHERE w.user.id = :userId AND LOWER(w.name) = :defaultName
+                                            """, Long.class)
                 .setParameter("userId", userId)
                 .setParameter("defaultName", Constants.DEFAULT_WISHLIST_NAME.toLowerCase())
                 .uniqueResult();
@@ -112,10 +114,10 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
     public boolean isProductInWishlist(Long wishlistId, String productCode) {
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
-                SELECT COUNT(we)
-                FROM WishlistEntryEntity we
-                WHERE we.wishlist.id = :wishlistId AND we.product.code = :productCode
-                """;
+                         SELECT COUNT(we)
+                         FROM WishlistEntryEntity we
+                         WHERE we.wishlist.id = :wishlistId AND we.product.code = :productCode
+                         """;
             Long count = session.createQuery(hql, Long.class)
                 .setParameter("wishlistId", wishlistId)
                 .setParameter("productCode", productCode.toUpperCase())
@@ -137,6 +139,46 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
             var user = userRepository.findById(userId).orElseThrow();
             wishlist.setUser(user);
             save(wishlist);
+        });
+    }
+
+    /**
+     * Finds those wishlists that satisfies the product change types for specified produft
+     *
+     * @param productEntity      Product
+     * @param productChangeTypes Product change types
+     *
+     * @return List of wishlists
+     */
+    public List<WishlistEntity> findWishlistsToNotify(
+        ProductEntity productEntity,
+        List<ProductChangeType> productChangeTypes
+    ) {
+        return databaseService.runInThreadTransaction(session -> {
+            boolean checkPriceDiscount = productChangeTypes.contains(ProductChangeType.PRICE_DISCOUNT);
+            boolean checkStockChange = productChangeTypes.contains(ProductChangeType.PRODUCT_STATE_CHANGED);
+
+            if (!checkPriceDiscount && !checkStockChange) {
+                return List.of();
+            }
+
+            var hql = """
+                      SELECT DISTINCT w
+                      FROM WishlistEntity w
+                      JOIN w.entries e
+                      WHERE e.product = :product
+                      AND (
+                          (:checkPriceDiscount = true AND w.priceDiscountEnabled = true)
+                          OR
+                          (:checkStockChange = true AND w.stockChangeEnabled = true)
+                      )
+                      """;
+
+            return session.createQuery(hql, WishlistEntity.class)
+                .setParameter("product", productEntity)
+                .setParameter("checkPriceDiscount", checkPriceDiscount)
+                .setParameter("checkStockChange", checkStockChange)
+                .getResultList();
         });
     }
 }

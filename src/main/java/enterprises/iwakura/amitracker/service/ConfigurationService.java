@@ -4,8 +4,8 @@ import java.nio.file.Path;
 
 import com.google.gson.Gson;
 
-import enterprises.iwakura.amitracker.config.AkashaConfiguration;
 import enterprises.iwakura.amitracker.config.CacheConfiguration;
+import enterprises.iwakura.amitracker.config.ProductChangeAnnouncementConfiguration;
 import enterprises.iwakura.amitracker.config.ProductQueryConfiguration;
 import enterprises.iwakura.irminsul.DatabaseServiceConfiguration;
 import enterprises.iwakura.jean.Jean;
@@ -65,11 +65,11 @@ public class ConfigurationService {
     }
 
     /**
-     * Gets the Akasha configuration.
+     * Gets the ProductChangeAnnouncementConfiguration.
      *
-     * @return the Akasha configuration
+     * @return the ProductChangeAnnouncementConfiguration
      */
-    public AkashaConfiguration getAkasha() {
-        return jean.getOrLoad("akasha", AkashaConfiguration.class);
+    public ProductChangeAnnouncementConfiguration getProductChangeAnnouncementConfiguration() {
+        return jean.getOrLoad("product-change-announcement", ProductChangeAnnouncementConfiguration.class);
     }
 }

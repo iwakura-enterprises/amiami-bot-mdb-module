@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0004-product-change-types-to-jsonb
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropColumn:
+            tableName: product_change_announcement
+            columnName: productChangeTypes
+        - addColumn:
+            tableName: product_change_announcement
+            columns:
+              - column:
+                  name: productChangeTypes
+                  type: JSONB

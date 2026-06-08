@@ -7,13 +7,13 @@ import java.util.Optional;
 
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
+import enterprises.iwakura.amitracker.AmiTracker;
 import enterprises.iwakura.amitracker.constant.Constants;
 import enterprises.iwakura.amitracker.constant.Currency;
 import enterprises.iwakura.amitracker.database.entity.WishlistEntity;
 import enterprises.iwakura.amitracker.service.AmiAmiApiService;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.GuildService;
-import enterprises.iwakura.amitracker.service.ProductImageService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.service.WishlistService;
 import enterprises.iwakura.amitracker.util.ModalUtils;
@@ -60,21 +60,19 @@ public class WishlistOpenCommand extends WishlistSubCommand {
     private final WishlistService wishlistService;
     private final UserService userService;
     private final GuildService guildService;
-    private final ProductImageService productImageService;
     private final AmiAmiApiService amiAmiApiService;
     private final WishlistAddCommand wishlistAddCommand;
     private final WishlistEditCommand wishlistEditCommand;
 
     public WishlistOpenCommand(ConcurrencyService concurrencyService, WishlistService wishlistService,
         UserService userService,
-        GuildService guildService, ProductImageService productImageService, AmiAmiApiService amiAmiApiService,
+        GuildService guildService, AmiAmiApiService amiAmiApiService,
         WishlistAddCommand wishlistAddCommand, WishlistEditCommand wishlistEditCommand
     ) {
         super(concurrencyService);
         this.wishlistService = wishlistService;
         this.userService = userService;
         this.guildService = guildService;
-        this.productImageService = productImageService;
         this.amiAmiApiService = amiAmiApiService;
         this.wishlistAddCommand = wishlistAddCommand;
         this.wishlistEditCommand = wishlistEditCommand;
@@ -150,16 +148,15 @@ public class WishlistOpenCommand extends WishlistSubCommand {
                         });
                     } else {
                         try {
-                            var imageUrl = productImageService.fetchImageUrl(product.getImageUrl()).join();
-                            accessoryComponent = Thumbnail.fromUrl(imageUrl);
+                            accessoryComponent = Thumbnail.fromUrl(AmiTracker.AMI_AMI_IMAGE_URL.formatted(product.getImageUrl()));
                         } catch (Exception exception) {
-                            accessoryComponent = Thumbnail.fromUrl(ProductImageService.DEFAULT_IMAGE_URL);
+                            accessoryComponent = Thumbnail.fromUrl(AmiTracker.IMAGE_NOT_FOUND_URL);
                         }
                     }
 
                     return Section.of(
                         accessoryComponent,
-                        TextDisplay.of("**%s** [link](%s)".formatted(StringUtils.maxLength(product.getName(), 150), amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()))),
+                        TextDisplay.of("[**%s**](%s)".formatted(StringUtils.maxLength(product.getName(), 150), amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()))),
                         TextDisplay.of("├  Added on <t:%d:D>\n├  Current price of **%s %s**\n├  Current state **%s**\n└  `%s`".formatted(entry.getCreatedAt().toEpochSecond(), product.getPriceJpy(), Currency.JPY.getSymbol(), product.getProductState(), product.getCode()))
                     );
                 })

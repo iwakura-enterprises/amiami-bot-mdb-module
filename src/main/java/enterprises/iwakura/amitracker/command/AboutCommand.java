@@ -40,7 +40,7 @@ public class AboutCommand extends AmiTrackerCommand {
         List<MessageTopLevelComponent> components = List.of(
             Container.of(
                 Section.of(
-                    Thumbnail.fromUrl("https://akasha.iwakura.enterprises/data-source/hetzner/public/logo/ami-tracker-symbol.png")
+                    Thumbnail.fromUrl("https://goddrinksjava.net/akasha/data-source/hetzner/public/logo/ami-tracker-symbol.png")
                         .withDescription("Logo of Ami Tracker showing a silly fumo face."),
                     TextDisplay.of("# Ami Tracker"),
                     TextDisplay.of("A companion bot for accessing, bookmarking and tracking AmiAmi™ and products there.")

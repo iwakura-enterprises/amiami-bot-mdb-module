@@ -70,4 +70,24 @@ public class ReleaseDateParser {
         }
     }
 
+    /**
+     * Parses a release date that is written in more local date friendly format. Usually found on seach result items.
+     *
+     * @param releaseDate Release date in string
+     *
+     * @return Nullable local date
+     */
+    public static LocalDate parseNormal(String releaseDate) {
+        if (releaseDate == null || releaseDate.isBlank()) {
+            return null;
+        }
+
+        try {
+            // Handle "yyyy-MM-dd HH:mm:ss" or just "yyyy-MM-dd"
+            String datePart = releaseDate.contains(" ") ? releaseDate.split(" ")[0] : releaseDate;
+            return LocalDate.parse(datePart); // ISO format: yyyy-MM-dd
+        } catch (Exception e) {
+            return null;
+        }
+    }
 }

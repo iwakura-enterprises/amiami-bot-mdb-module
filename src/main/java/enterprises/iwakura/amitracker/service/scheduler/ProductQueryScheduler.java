@@ -40,7 +40,7 @@ public class ProductQueryScheduler extends BaseScheduler {
     private final ProductProcessorService productProcessorService;
 
     private final List<Long> scheduledProductListQueryIds = Collections.synchronizedList(new ArrayList<>());
-    private final List<Long> scheduledWishlistEntryIds = Collections.synchronizedList(new ArrayList<>());
+    private final List<String> scheduledProductCodeQueries = Collections.synchronizedList(new ArrayList<>());
 
     @Override
     public void initialize() {
@@ -80,7 +80,7 @@ public class ProductQueryScheduler extends BaseScheduler {
             if (!pendingWishlistEntries.isEmpty()) {
                 var ids = pendingWishlistEntries.stream().map(e -> e.getId().toString()).reduce((a, b) -> a + ", " + b).orElse("");
                 log.debug("Found {} pending wishlist entries to process: {}", pendingWishlistEntries.size(), ids);
-                pendingWishlistEntries.forEach(entry -> concurrencyService.scheduleQuery(() -> runProductQuery(entry)));
+                pendingWishlistEntries.forEach(entry -> concurrencyService.scheduleQuery(() -> runProductQuery(entry.getProduct().getCode())));
             }
         });
     }
@@ -161,7 +161,7 @@ public class ProductQueryScheduler extends BaseScheduler {
                 productListQueryRepository.save(refreshedEntity);
             });
 
-            productProcessorService.process(pageResponses);
+            productProcessorService.process(productListQueryEntity, pageResponses);
         } catch (MissingEntityException exception) {
             log.warn("After scheduling and before processing, the ProductListQueryEntity with ID {} was not found. It may have been deleted.",
                 productListQueryEntity.getId()
@@ -178,31 +178,29 @@ public class ProductQueryScheduler extends BaseScheduler {
     }
 
     /**
-     * Schedules a WishlistEntryEntity for processing if it is not already scheduled.
+     * Schedules an arbitrary product code query.
      *
-     * @param wishlistEntry the WishlistEntryEntity to schedule
+     * @param productCode the product code
      */
-    public void runProductQuery(WishlistEntryEntity wishlistEntry) {
-        synchronized (scheduledWishlistEntryIds) {
-            if (scheduledWishlistEntryIds.contains(wishlistEntry.getId())) {
-                log.debug("WishlistEntryEntity with ID {} is already scheduled. Skipping.",
-                    wishlistEntry.getId()
+    public void runProductQuery(String productCode) {
+        synchronized (scheduledProductCodeQueries) {
+            if (scheduledProductCodeQueries.contains(productCode)) {
+                log.debug("Product code {} is already scheduled. Skipping.",
+                    productCode
                 );
                 return;
             }
 
-            scheduledWishlistEntryIds.add(wishlistEntry.getId());
-            log.debug("Scheduled WishlistEntryEntity with ID {} for processing.", wishlistEntry.getId());
+            scheduledProductCodeQueries.add(productCode);
+            log.debug("Scheduled product code {} for processing.", productCode);
         }
 
         try {
-            var productCode = wishlistEntry.getProduct().getCode();
             // Schedules item detail query; respects rate limiting, interval settings and checks whenever it was recently queried.
             var itemResponse = amiAmiQueryService.scheduleItemDetail(new ProductQueryRequest(productCode)).join();
 
             if (!itemResponse.isSuccessful()) {
-                log.error("Failed to fetch item details for WishlistEntryEntity with ID {} and product code {}. Errors: {}",
-                    wishlistEntry.getId(),
+                log.error("Failed to fetch item details for product code {}. Errors: {}",
                     productCode,
                     itemResponse.getResponseValue()
                 );
@@ -211,13 +209,13 @@ public class ProductQueryScheduler extends BaseScheduler {
 
             productProcessorService.process(itemResponse);
         } catch (QueryFailedException exception) {
-            log.error("Query failed while processing WishlistEntryEntity with ID {}: {}",
-                wishlistEntry.getId(), exception.getMessage(), exception
+            log.error("Query failed while processing product code {}: {}",
+                productCode, exception.getMessage(), exception
             );
         } catch (Exception exception) {
-            log.error("Error processing WishlistEntryEntity with ID {}", wishlistEntry.getId(), exception);
+            log.error("Error processing product code {}", productCode, exception);
         } finally {
-            scheduledWishlistEntryIds.remove(wishlistEntry.getId());
+            scheduledProductCodeQueries.remove(productCode);
         }
     }
 }
