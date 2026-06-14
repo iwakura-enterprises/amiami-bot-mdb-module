@@ -13,8 +13,8 @@ public class ProductNotifyCommand extends AmiTrackerCommand {
 
     public ProductNotifyCommand(ConcurrencyService concurrencyService, List<ProductNotifySubCommand> subcommands) {
         super(concurrencyService);
-        this.name = "product-notify";
-        this.help = "Manage product notifications";
+        this.name = "search-notification";
+        this.help = "Manage product search notifications";
 
         this.children = subcommands.toArray(new ProductNotifySubCommand[0]);
     }

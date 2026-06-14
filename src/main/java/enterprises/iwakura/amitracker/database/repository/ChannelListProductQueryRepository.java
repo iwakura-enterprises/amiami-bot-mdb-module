@@ -80,4 +80,24 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
                 .getResultList();
         });
     }
+
+    /**
+     * Finds all {@link ChannelProductListQueryEntity} by their channel ID
+     *
+     * @param channelId Channel ID
+     *
+     * @return List of ChannelProductListQueryEntity
+     */
+    public List<ChannelProductListQueryEntity> findAllByChannelId(long channelId) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql = """
+                      FROM ChannelProductListQueryEntity c
+                      WHERE c.channel.id = :channelId
+                      """;
+
+            return session.createQuery(hql, ChannelProductListQueryEntity.class)
+                .setParameter("channelId", channelId)
+                .getResultList();
+        });
+    }
 }

@@ -6,10 +6,13 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import enterprises.iwakura.amitracker.constant.Constants;
+import enterprises.iwakura.amitracker.object.ProductSearchParameters;
 import enterprises.iwakura.amitracker.service.AmiAmiApiService;
 import enterprises.iwakura.kirara.amiami.request.AmiAmiSearchRequest;
 import enterprises.iwakura.kirara.amiami.request.AmiAmiSearchRequest.SortKeys;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -43,33 +46,28 @@ public class ProductListQueryEntity {
      * just 1. The usual amount of products per page is {@link AmiAmiApiService#MAX_ITEMS_PER_QUERY}.
      */
     @Column(nullable = false)
-    private Integer maxPagination;
+    private int maxPagination = Constants.DEFAULT_PRODUCT_LIST_QUERY_PAGINATION;
 
     /**
      * Whenever the next product added/removed to list changes should be ignored. Usually used when changing the
      * max pagination.
      */
-    private boolean skipNextProductAddOrRemoveChangeAnnouncements;
+    @Column(nullable = false)
+    private boolean skipNextProductAddOrRemoveChangeAnnouncements = false;
+
+    /**
+     * Determines whenever this product list query is a global template. Templates will
+     * not be deleted when the last ChannelProductListQueryEntity gets deleted. Also,
+     * templates are shown in the /search-notification template command
+     */
+    private boolean globalTemplate;
 
     // Search params
-    private String searchKeywords;
-    private Boolean filterAnyAvailability;
-    private Boolean filterPreOrder;
-    private Boolean filterBackOrder;
-    private Boolean filterNewItems;
-    private Boolean filterPreOwnedItems;
-    private Boolean filterOnSaleItems;
-    private Integer category1Id;
-    private Integer category2Id;
-    private Integer category3Id;
-    private Integer category4Id;
-    private Integer characterNameId;
-    private Integer makerId;
-    private Integer originalTitleId;
-    private Integer seriesTitleId;
+    @Embedded
+    private ProductSearchParameters productSearchParameters;
 
     @Column(nullable = false)
-    private Long totalItemsCount;
+    private long totalItemsCount = 0L;
 
     private OffsetDateTime lastQueryAt;
 
@@ -84,21 +82,23 @@ public class ProductListQueryEntity {
             .maximumItemsPerPage(AmiAmiApiService.MAX_ITEMS_PER_QUERY)
             .pageNumber(page)
             .sortKey(SortKeys.RECENTLY_UPDATED)
-            .searchKeywords(searchKeywords)
-            .filterAnyAvailability(filterAnyAvailability)
-            .filterPreOrder(filterPreOrder)
-            .filterBackOrder(filterBackOrder)
-            .filterNewItems(filterNewItems)
-            .filterPreOwnedItems(filterPreOwnedItems)
-            .filterOnSaleItems(filterOnSaleItems)
-            .category1Id(category1Id)
-            .category2Id(category2Id)
-            .category3Id(category3Id)
-            .category4Id(category4Id)
-            .characterNameId(characterNameId)
-            .makerId(makerId)
-            .originalTitleId(originalTitleId)
-            .seriesTitleId(seriesTitleId)
+            .searchKeywords(productSearchParameters.getSearchKeywords())
+            .filterAnyAvailability(productSearchParameters.getFilterAnyAvailability())
+            .filterPreOrder(productSearchParameters.getFilterPreOrder())
+            .filterBackOrder(productSearchParameters.getFilterBackOrder())
+            .filterNewItems(productSearchParameters.getFilterNewItems())
+            .filterPreOwnedItems(productSearchParameters.getFilterPreOwnedItems())
+            .filterAmiAmiBonus(productSearchParameters.getFilterAmiAmiBonus())
+            .filterOnSaleItems(productSearchParameters.getFilterOnSaleItems())
+            .category1Id(productSearchParameters.getCategory1Id())
+            .category2Id(productSearchParameters.getCategory2Id())
+            .category3Id(productSearchParameters.getCategory3Id())
+            .category4Id(productSearchParameters.getCategory4Id())
+            .categoryTagId(productSearchParameters.getCategoryTagId())
+            .characterNameId(productSearchParameters.getCharacterNameId())
+            .makerId(productSearchParameters.getMakerId())
+            .originalTitleId(productSearchParameters.getOriginalTitleId())
+            .seriesTitleId(productSearchParameters.getSeriesTitleId())
             .build();
     }
 }

@@ -99,10 +99,10 @@ public class WishlistEditCommand extends WishlistSubCommand {
         components.add(TextDisplay.of("### Editing wishlist %s".formatted(StringUtils.capitalize(wishlist.getName()))));
         components.add(Separator.createDivider(Spacing.SMALL));
 
-        var priceDiscountButton = interactableMessage.addInteraction(Interaction.asButton(createToggleButton(wishlist.getPriceDiscountEnabled())), event -> {
+        var priceDiscountButton = interactableMessage.addInteraction(Interaction.asButton(createToggleButton(wishlist.isPriceDiscountEnabled())), event -> {
             event.deferEdit().complete();
 
-            boolean newState = !wishlist.getPriceDiscountEnabled();
+            boolean newState = !wishlist.isPriceDiscountEnabled();
             wishlist.setPriceDiscountEnabled(newState);
             wishlistService.saveWishlist(wishlist);
             showMainMenu(user, hook, wishlist);
@@ -110,10 +110,10 @@ public class WishlistEditCommand extends WishlistSubCommand {
             return Result.REMOVE;
         });
 
-        var stockChangeButton = interactableMessage.addInteraction(Interaction.asButton(createToggleButton(wishlist.getStockChangeEnabled())), event -> {
+        var stockChangeButton = interactableMessage.addInteraction(Interaction.asButton(createToggleButton(wishlist.isStockChangeEnabled())), event -> {
             event.deferEdit().complete();
 
-            boolean newState = !wishlist.getStockChangeEnabled();
+            boolean newState = !wishlist.isStockChangeEnabled();
             wishlist.setStockChangeEnabled(newState);
             wishlistService.saveWishlist(wishlist);
             showMainMenu(user, hook, wishlist);
@@ -131,7 +131,7 @@ public class WishlistEditCommand extends WishlistSubCommand {
             Section.of(
                 stockChangeButton,
                 TextDisplay.of("**Stock Change Alerts**"),
-                TextDisplay.of("Enables or disables stock change alerts for this wishlist.\nWhen enabled, you will receive notifications **when products in this wishlist come back in stock**.")
+                TextDisplay.of("Enables or disables stock change alerts for this wishlist.\nWhen enabled, you will receive notifications **when products in this wishlist change their stock status**.")
             )
         );
 

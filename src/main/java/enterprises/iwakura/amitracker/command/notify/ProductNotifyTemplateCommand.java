@@ -6,12 +6,12 @@ import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 
 @Bean
-public class ProductNotifyCreateTemplateCommand extends ProductNotifySubCommand {
+public class ProductNotifyTemplateCommand extends ProductNotifySubCommand {
 
-    public ProductNotifyCreateTemplateCommand(ConcurrencyService concurrencyService) {
+    public ProductNotifyTemplateCommand(ConcurrencyService concurrencyService) {
         super(concurrencyService);
-        this.name = "create-template";
-        this.help = "Create product notification from template in current channel";
+        this.name = "template";
+        this.help = "Creates a product search notification from a template";
     }
 
     @Override

@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0005-product-list-query-global-templates
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: product_query
+            columns:
+              - column:
+                  name: globalTemplate
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

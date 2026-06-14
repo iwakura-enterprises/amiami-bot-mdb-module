@@ -17,10 +17,10 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
     public ProductNotifyEditCommand(ConcurrencyService concurrencyService) {
         super(concurrencyService);
         this.name = "edit";
-        this.help = "Edit product notification settings in current server";
+        this.help = "Edit product search notification settings in current server";
 
         this.options = List.of(
-            new OptionData(OptionType.STRING, OPTION_PRODUCT_LIST_NAME, "Specific product notifications", true)
+            new OptionData(OptionType.STRING, OPTION_PRODUCT_LIST_NAME, "Specific product notifications", true, true)
         );
     }
 

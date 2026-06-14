@@ -44,10 +44,10 @@ public class WishlistEntity {
     private String name;
 
     @Column(nullable = false)
-    private Boolean priceDiscountEnabled;
+    private boolean priceDiscountEnabled = true;
 
     @Column(nullable = false)
-    private Boolean stockChangeEnabled;
+    private boolean stockChangeEnabled = true;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id")

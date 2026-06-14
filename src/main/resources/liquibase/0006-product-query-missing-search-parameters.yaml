@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0006-product-query-missing-search-parameters
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: product_query
+            columns:
+              - column:
+                  name: filterAmiAmiBonus
+                  type: BOOLEAN
+              - column:
+                  name: categoryTagId
+                  type: INT

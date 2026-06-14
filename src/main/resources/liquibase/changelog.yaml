@@ -11,3 +11,9 @@ databaseChangeLog:
   - include:
       file: 0004-product-change-types-to-jsonb.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0005-product-list-query-global-templates.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 0006-product-query-missing-search-parameters.yaml
+      relativeToChangelogFile: true

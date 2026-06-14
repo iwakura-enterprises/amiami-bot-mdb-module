@@ -47,7 +47,7 @@ dependencies {
     // Personal libraries
     compileOnly 'enterprises.iwakura:modular-discord-bot:3.5.2'
     compileOnly 'enterprises.iwakura:jda-interactables:2.2.0'
-    amber 'enterprises.iwakura:irminsul:0.2.2'
+    amber 'enterprises.iwakura:irminsul:0.2.3'
     compileOnly 'dev.mayuna:mayus-library:3.1'
     compileOnly 'dev.mayuna:mayus-json-utilities:2.1'
     compileOnly 'enterprises.iwakura:ganyu:1.1.1'

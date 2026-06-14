@@ -154,8 +154,18 @@ public class ProductProcessorService {
             // These product codes where in the list previously but now they are removed.
             // Fetch them standalone and check their status & update
             if (!productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
-                removedProductCodesFromListQuery.forEach(productCode ->
-                    productQuerySchedulerBeanAccessor.getBeanInstance().runProductQuery(productCode));
+                if (!removedProductCodesFromListQuery.isEmpty()) {
+                    log.info("Product list query {} has {} removed product codes: {}",
+                        productListQueryEntity.getId(), removedProductCodesFromListQuery.size(), removedProductCodesFromListQuery
+                    );
+
+                    // Not runing produc query for them
+                    // They will be sorted as first, if the state changed
+                    // And if they were moved to the second page, then what gives.
+                    // They will be first again if they change.
+                    //removedProductCodesFromListQuery.forEach(productCode ->
+                    //    productQuerySchedulerBeanAccessor.getBeanInstance().runProductQuery(productCode));
+                }
             }
 
             // Remove them so they are not queried again

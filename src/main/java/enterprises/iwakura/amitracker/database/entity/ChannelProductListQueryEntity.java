@@ -40,13 +40,13 @@ public class ChannelProductListQueryEntity {
     private String name;
 
     @Column(nullable = false)
-    private Boolean priceDiscountEnabled;
+    private boolean priceDiscountEnabled = true;
 
     @Column(nullable = false)
-    private Boolean stockChangeEnabled;
+    private boolean stockChangeEnabled = true;
 
     @Column(nullable = false)
-    private Boolean newProductsEnabled;
+    private boolean newProductsEnabled = true;
 
     @Column(nullable = false, columnDefinition = "bigint[]")
     private Set<Long> roleIdsToNotify = new HashSet<>();
