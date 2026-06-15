@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import enterprises.iwakura.amitracker.database.entity.WishlistEntity;
 import enterprises.iwakura.amitracker.database.entity.WishlistEntryEntity;
+import enterprises.iwakura.amitracker.database.repository.ProductChangeAnnouncementRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistEntryRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistRepository;
 import enterprises.iwakura.amitracker.object.ErrorContext;
@@ -29,6 +30,7 @@ public class WishlistService {
     private final ProductService productService;
     private final WishlistRepository wishlistRepository;
     private final WishlistEntryRepository wishlistEntryRepository;
+    private final ProductChangeAnnouncementRepository productChangeAnnouncementRepository;
     private final DatabaseService databaseService;
 
     /**
@@ -120,7 +122,7 @@ public class WishlistService {
             }
             var wishlist = optionalWishlist.get();
             var entries = wishlistEntryRepository.suggestProductsInWishlist(
-                userId, wishlist.getId(), productCode, OptionData.MAX_CHOICE_NAME_LENGTH);
+                userId, wishlist.getId(), productCode, OptionData.MAX_CHOICES);
             return entries.stream()
                 .map(entry -> new ProductChoice(entry.getProduct()).toChoice())
                 .toList();
@@ -191,14 +193,18 @@ public class WishlistService {
      * @return an ErrorContext indicating success or if the wishlist was not found
      */
     public ErrorContext deleteWishlist(long userId, String wishlistName) {
-        var optionalWishlist = findWishlistForUser(userId, wishlistName);
+        return databaseService.runInThreadTransaction(session -> {
+            var optionalWishlist = findWishlistForUser(userId, wishlistName);
 
-        if (optionalWishlist.isPresent()) {
-            wishlistRepository.deleteById(optionalWishlist.get().getId());
-            return ErrorContext.success();
-        } else {
-            return ErrorContext.of(Type.WISHLIST_NOT_FOUND, wishlistName);
-        }
+            if (optionalWishlist.isPresent()) {
+                var wishlist = optionalWishlist.get();
+                productChangeAnnouncementRepository.deleteAll(wishlist.getProductChangeAnnouncements());
+                wishlistRepository.delete(wishlist);
+                return ErrorContext.success();
+            } else {
+                return ErrorContext.of(Type.WISHLIST_NOT_FOUND, wishlistName);
+            }
+        });
     }
 
     /**

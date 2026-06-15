@@ -56,6 +56,9 @@ public class WishlistEntity {
     @OneToMany(mappedBy = "wishlist")
     private List<WishlistEntryEntity> entries = new ArrayList<>();
 
+    @OneToMany(mappedBy = "wishlist", fetch = FetchType.LAZY)
+    private List<ProductChangeAnnouncementEntity> productChangeAnnouncements;
+
     /**
      * Creates a default placeholder wishlist entity.
      *

@@ -63,8 +63,7 @@ public class ProductService {
      * @return a collection of choices for product codes
      */
     public Collection<Choice> suggestProductCodes(String searchQuery) {
-        var products = productRepository.suggestProductCodesFiltered(URLHelper.extractProductCode(searchQuery),
-            OptionData.MAX_CHOICE_NAME_LENGTH);
+        var products = productRepository.suggestProductCodesFiltered(URLHelper.extractProductCode(searchQuery), OptionData.MAX_CHOICES);
         return products.stream()
             .map(product -> new ProductChoice(product).toChoice())
             .toList();

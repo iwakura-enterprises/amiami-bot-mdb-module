@@ -38,6 +38,7 @@ public class ChannelEntity {
     @UpdateTimestamp
     private OffsetDateTime updatedAt;
 
+    // TODO: Listen to channel updates and update this name
     @NotNull
     @Column(nullable = false)
     private String name;

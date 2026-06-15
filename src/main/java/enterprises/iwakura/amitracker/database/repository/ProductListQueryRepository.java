@@ -210,7 +210,7 @@ public class ProductListQueryRepository extends AmiBaseRepository<ProductListQue
                 .uniqueResultOptional();
 
             if (resultId.isPresent()) {
-                return session.get(ProductListQueryEntity.class, resultId.get());
+                return session.find(ProductListQueryEntity.class, resultId.get());
             } else {
                 log.info("Creating new ProductListQueryEntity with search parameters {}", productSearchParameters);
                 var newProductListQuery = new ProductListQueryEntity();

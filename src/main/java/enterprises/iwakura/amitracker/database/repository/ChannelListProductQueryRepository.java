@@ -1,6 +1,7 @@
 package enterprises.iwakura.amitracker.database.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
@@ -98,6 +99,76 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
             return session.createQuery(hql, ChannelProductListQueryEntity.class)
                 .setParameter("channelId", channelId)
                 .getResultList();
+        });
+    }
+
+    /**
+     * Finds all {@link ChannelProductListQueryEntity} by their guild ID
+     *
+     * @param guildId Guild ID
+     *
+     * @return list of ChannelProductListQueryEntity
+     */
+    public List<ChannelProductListQueryEntity> findAllByGuildId(long guildId) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql = """
+                      FROM ChannelProductListQueryEntity c
+                      WHERE c.channel.guild.id = :guildId
+                      """;
+
+            return session.createQuery(hql, ChannelProductListQueryEntity.class)
+                .setParameter("guildId", guildId)
+                .getResultList();
+        });
+    }
+
+    /**
+     * Suggests ChannelProductListQueryEntities based on the guild ID and searching name
+     *
+     * @param guildId       Guild ID
+     * @param searchingName searching name
+     * @param maxElements   Max elements
+     *
+     * @return List of resulting ChannelProductListQueryEntities
+     */
+    public List<ChannelProductListQueryEntity> suggestByGuild(long guildId, String searchingName, int maxElements) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql = """
+                  FROM ChannelProductListQueryEntity c
+                  WHERE c.channel.guild.id = :guildId
+                  AND c.name LIKE :searchingName
+                  ORDER BY c.name ASC
+                  """;
+
+            return session.createQuery(hql, ChannelProductListQueryEntity.class)
+                .setParameter("guildId", guildId)
+                .setParameter("searchingName", "%" + searchingName + "%")
+                .setMaxResults(maxElements)
+                .getResultList();
+        });
+    }
+
+    /**
+     * Finds ChannelProductListQueryEntity by guild ID and entity ID. Makes sure the entity is from the
+     * specified guild ID.
+     *
+     * @param guildId  Guild ID
+     * @param entityId Entity ID
+     *
+     * @return Optional of ChannelProductListQueryEntity
+     */
+    public Optional<ChannelProductListQueryEntity> findByGuildIdAndId(long guildId, long entityId) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql = """
+                  FROM ChannelProductListQueryEntity c
+                  WHERE c.id = :entityId
+                  AND c.channel.guild.id = :guildId
+                  """;
+
+            return session.createQuery(hql, ChannelProductListQueryEntity.class)
+                .setParameter("entityId", entityId)
+                .setParameter("guildId", guildId)
+                .uniqueResultOptional();
         });
     }
 }
