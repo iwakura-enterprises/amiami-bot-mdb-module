@@ -52,8 +52,9 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
             boolean checkPriceDiscount = productChangeTypes.contains(ProductChangeType.PRICE_DISCOUNT);
             boolean checkStockChange = productChangeTypes.contains(ProductChangeType.PRODUCT_STATE_CHANGED);
             boolean checkNewProducts = productChangeTypes.contains(ProductChangeType.PRODUCT_LIST_NEW_PRODUCT);
+            boolean experimentalImageUrlChanged = productChangeTypes.contains(ProductChangeType.EXPERIMENTAL_IMAGE_URL_CHANGE);
 
-            if (!checkPriceDiscount && !checkStockChange && !checkNewProducts) {
+            if (!checkPriceDiscount && !checkStockChange && !checkNewProducts && !experimentalImageUrlChanged) {
                 return List.of();
             }
 
@@ -69,6 +70,8 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
                           (:checkStockChange = true AND c.stockChangeEnabled = true)
                           OR
                           (:checkNewProducts = true AND c.newProductsEnabled = true)
+                          OR
+                          (:experimentalImageUrlChanged = true)
                       )
                       """;
 
@@ -78,6 +81,7 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
                 .setParameter("checkPriceDiscount", checkPriceDiscount)
                 .setParameter("checkStockChange", checkStockChange)
                 .setParameter("checkNewProducts", checkNewProducts)
+                .setParameter("experimentalImageUrlChanged", experimentalImageUrlChanged)
                 .getResultList();
         });
     }

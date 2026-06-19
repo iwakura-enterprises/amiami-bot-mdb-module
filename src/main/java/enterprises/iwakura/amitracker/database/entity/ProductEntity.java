@@ -6,7 +6,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import enterprises.iwakura.amitracker.constant.ProductState;
 import jakarta.persistence.Basic;
@@ -64,6 +66,9 @@ public class ProductEntity {
     private ProductState productState;
 
     private LocalDate releaseDate;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String responseJson;
 
     /**
      * History for the product.

@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0007-product-and-query-json-response
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: product
+            columns:
+              - column:
+                  name: responseJson
+                  type: JSONB
+        - addColumn:
+            tableName: product_query
+            columns:
+              - column:
+                  name: responseJson
+                  type: JSONB

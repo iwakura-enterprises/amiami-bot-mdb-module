@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import com.google.gson.Gson;
+
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
@@ -40,6 +42,8 @@ public class ProductProcessorService {
     private final ProductQueryResultEntryRepository productQueryResultEntryRepository;
     private final ProductChangeAnnounceService productChangeAnnounceService;
 
+    private final Gson gson;
+
     @Bean
     private final BeanAccessor<ProductQueryScheduler> productQuerySchedulerBeanAccessor = new BeanAccessor<>(
         ProductQueryScheduler.class);
@@ -50,7 +54,9 @@ public class ProductProcessorService {
                 log.warn("Ignoring empty search response");
                 return;
             }
-            log.info("Processing {} search responses", searchResponses.size());
+
+            log.info("Processing {} search responses for product list query {}", searchResponses.size(), productListQueryEntity.getId());
+            productListQueryEntity.setResponseJson(gson.toJson(searchResponses));
 
             var resultItemByCode = searchResponses.stream()
                 .flatMap(response -> response.getItems().stream())
@@ -90,9 +96,7 @@ public class ProductProcessorService {
                             );
                         }
                     } else {
-                        log.error(
-                            "This should not happen! Result item not found from newProductCode {} when adding products to"
-                                + " a list {}",
+                        log.error("This should not happen! Result item not found from newProductCode {} when adding products to a list {}",
                             newProductCode, productListQueryEntity.getId()
                         );
                     }
@@ -117,8 +121,15 @@ public class ProductProcessorService {
                             }
 
                             // Update existing product and check for changes
-                            checkChangesAndUpdateAndAnnounce(productEntity, resultItem.getMinimumPriceJpy(),
-                                ProductState.parse(resultItem));
+                            productEntity.setResponseJson(gson.toJson(resultItem));
+                            productRepository.save(productEntity);
+                            checkChangesAndUpdateAndAnnounce(
+                                productEntity,
+                                resultItem.getMinimumPriceJpy(),
+                                ProductState.parse(resultItem),
+                                resultItem.getThumbnailUrl(),
+                                searchResponses
+                            );
                         } else {
                             log.error(
                                 "This should not happen! Result item not found from ProductEntity code {} when adding products to a list {}",
@@ -140,12 +151,13 @@ public class ProductProcessorService {
 
                     if (resultItem != null) {
                         // Update existing product entity & check for changes
-                        checkChangesAndUpdateAndAnnounce(productEntity, resultItem.getMinimumPriceJpy(),
-                            ProductState.parse(resultItem));
+                        productEntity.setResponseJson(gson.toJson(resultItem));
+                        productRepository.save(productEntity);
+                        checkChangesAndUpdateAndAnnounce(productEntity, resultItem.getMinimumPriceJpy(), ProductState.parse(resultItem), resultItem.getThumbnailUrl(), searchResponses);
                     } else {
-                        log.error(
-                            "This should not happen! Result item not found from ProductEntity code {} when updating remaining products",
-                            productEntity.getCode());
+                        log.error("This should not happen! Result item not found from ProductEntity code {} when updating remaining products",
+                            productEntity.getCode()
+                        );
                     }
                 });
             }
@@ -169,7 +181,8 @@ public class ProductProcessorService {
             }
 
             // Remove them so they are not queried again
-            productListQueryRepository.removeResultEntriesByProductCodes(productListQueryEntity.getId(), removedProductCodesFromListQuery);
+            // Not removing to prevent double sending of new products
+            //productListQueryRepository.removeResultEntriesByProductCodes(productListQueryEntity.getId(), removedProductCodesFromListQuery);
 
             if (productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
                 log.info("The next product list query process for ID {} will announce new/removed products", productListQueryEntity.getId());
@@ -194,14 +207,16 @@ public class ProductProcessorService {
             return Optional.empty();
         }
 
-        log.info("Processing item response: {}", itemResponse);
+        log.info("Processing item response with code {}", itemResponse.getItem().getGCode());
+
         var item = itemResponse.getItem();
         var optionalExistingProduct = productRepository.findByCode(item.getGCode());
         if (optionalExistingProduct.isPresent()) {
             var existingProduct = optionalExistingProduct.get();
+            existingProduct.setResponseJson(gson.toJson(item));
 
             // Update existing product entity & check for changes
-            checkChangesAndUpdateAndAnnounce(existingProduct, item.getPriceJpy(), ProductState.parse(item));
+            checkChangesAndUpdateAndAnnounce(existingProduct, item.getPriceJpy(), ProductState.parse(item), item.getMainImageUrl(), null);
 
             existingProduct.setUpdatedAt(OffsetDateTime.now());
             productRepository.save(existingProduct);
@@ -225,14 +240,18 @@ public class ProductProcessorService {
     public void checkChangesAndUpdateAndAnnounce(
         ProductEntity productEntity,
         long newPriceJpy,
-        ProductState newProductState
+        ProductState newProductState,
+        String newImageUrl,
+        List<AmiAmiSearchResponse> searchResponses
     ) {
         final var oldPriceJpy = productEntity.getPriceJpy();
         final var oldProductState = productEntity.getProductState();
+        final var oldImageUrl = productEntity.getImageUrl();
 
         boolean priceChanged = !Objects.equals(oldPriceJpy, newPriceJpy);
         boolean priceHasDiscount = newPriceJpy < oldPriceJpy;
         boolean productStateChanged = !Objects.equals(oldProductState, newProductState);
+        boolean imageUrlChanged = !Objects.equals(oldImageUrl, newImageUrl);
         List<ProductChangeType> productChangeTypes = new ArrayList<>();
 
         if (productStateChanged) {
@@ -240,6 +259,10 @@ public class ProductProcessorService {
         }
         if (priceHasDiscount) {
             productChangeTypes.add(ProductChangeType.PRICE_DISCOUNT);
+        }
+        if (imageUrlChanged) {
+            productChangeTypes.add(ProductChangeType.EXPERIMENTAL_IMAGE_URL_CHANGE);
+            log.info("Image URL changed!!!!!!!!!!!!: Search response: {}", Optional.ofNullable(searchResponses).orElse(List.of()));
         }
 
         // Save even if price is not of discount
@@ -254,10 +277,11 @@ public class ProductProcessorService {
         }
 
         if (!productChangeTypes.isEmpty()) {
-            log.info("Product {} has some changed tracked attribute (price {} -> {}, state {} -> {}), resolved as {}",
+            log.info("Product {} has some changed tracked attribute (price {} -> {}, state {} -> {}, image url {} -> {}), resolved as {}",
                 productEntity.getCode(),
                 oldPriceJpy, newPriceJpy,
                 oldProductState, newProductState,
+                oldImageUrl, newImageUrl,
                 productChangeTypes
             );
 
@@ -289,6 +313,7 @@ public class ProductProcessorService {
             product.setMakerName(item.getMakerName());
             product.setProductState(ProductState.parse(item));
             product.setReleaseDate(ReleaseDateParser.parse(item.getReleaseDate()));
+            product.setResponseJson(gson.toJson(item));
             var savedProduct = productRepository.save(product);
             productHistoryService.initialize(savedProduct);
             return savedProduct;
@@ -312,6 +337,7 @@ public class ProductProcessorService {
             product.setMakerName(resultItem.getMakerName());
             product.setProductState(ProductState.parse(resultItem));
             product.setReleaseDate(ReleaseDateParser.parseNormal(resultItem.getReleaseDate()));
+            product.setResponseJson(gson.toJson(resultItem));
             var savedProduct = productRepository.save(product);
             productHistoryService.initialize(savedProduct);
             return savedProduct;

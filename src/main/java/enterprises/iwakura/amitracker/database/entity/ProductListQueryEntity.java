@@ -4,7 +4,9 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import enterprises.iwakura.amitracker.constant.Constants;
 import enterprises.iwakura.amitracker.object.ProductSearchParameters;
@@ -70,6 +72,9 @@ public class ProductListQueryEntity {
     private long totalItemsCount = 0L;
 
     private OffsetDateTime lastQueryAt;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String responseJson;
 
     @OneToMany(mappedBy = "productListQuery", fetch = FetchType.LAZY)
     private List<ProductListQueryResultEntryEntity> entries;

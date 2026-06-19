@@ -1,6 +1,7 @@
 package enterprises.iwakura.amitracker.command.inventory;
 
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,11 +78,16 @@ public class InventoryAddCommand extends InventorySubCommand {
         var productCode = event.getOption(OPTION_PRODUCT_CODE, OptionMapping::getAsString);
         var price = event.getOption(OPTION_PRICE, OptionMapping::getAsDouble);
         var purchaseDateString = event.getOption(OPTION_PURCHASE_DATE, OptionMapping::getAsString);
-        var purchaseDate = purchaseDateString == null ? OffsetDateTime.now()
-            : OffsetDateTime.parse(purchaseDateString + "T00:00:00+00:00");
-        var currencyString = event.getOption(OPTION_CURRENCY, Constants.DEFAULT_CURRENCY.name(),
-            OptionMapping::getAsString);
+        OffsetDateTime purchaseDate;
+        var currencyString = event.getOption(OPTION_CURRENCY, Constants.DEFAULT_CURRENCY.name(), OptionMapping::getAsString);
         var currency = Currency.fromString(currencyString).orElse(null);
+
+        try {
+            purchaseDate = purchaseDateString == null ? OffsetDateTime.now() : OffsetDateTime.parse(purchaseDateString + "T00:00:00+00:00");
+        } catch (DateTimeParseException e) {
+            event.reply("Invalid date format `%s`".formatted(purchaseDateString)).setEphemeral(true).queue();
+            return;
+        }
 
         var hook = event.deferReply(true).complete();
 

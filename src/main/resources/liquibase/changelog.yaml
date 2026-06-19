@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       file: 0006-product-query-missing-search-parameters.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0007-product-and-query-json-response.yaml
+      relativeToChangelogFile: true

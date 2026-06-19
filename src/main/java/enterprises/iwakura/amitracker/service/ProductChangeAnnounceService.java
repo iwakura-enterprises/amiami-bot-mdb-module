@@ -405,6 +405,9 @@ public class ProductChangeAnnounceService {
                 case PRODUCT_LIST_NEW_PRODUCT -> {
                     sb.append("- Product appeared in the search results");
                 }
+                case EXPERIMENTAL_IMAGE_URL_CHANGE -> {
+                    sb.append("- (EXPERIMENTAL) Image URL changed");
+                }
             }
         }
         return sb.toString();
