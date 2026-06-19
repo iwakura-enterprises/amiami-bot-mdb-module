@@ -47,4 +47,26 @@ public class UserRepository extends AmiBaseRepository<UserEntity, Long> {
             });
         });
     }
+
+    /**
+     * Updates user's name
+     *
+     * @param userId   User ID
+     * @param userName User name
+     */
+    public void updateUserName(long userId, String userName) {
+        databaseService.runInThreadTransaction(session -> {
+            var hql =
+                """
+                UPDATE UserEntity u
+                SET u.name = :userName
+                WHERE u.id = :userId
+                """;
+            session.createQuery(hql)
+                .setParameter("userId", userId)
+                .setParameter("userName", userName)
+                .executeUpdate();
+            return null;
+        });
+    }
 }

@@ -59,4 +59,26 @@ public class ChannelRepository extends AmiBaseRepository<ChannelEntity, Long> {
             });
         });
     }
+
+    /**
+     * Updates channel's name
+     *
+     * @param channelId   Channel ID
+     * @param channelName Channel name
+     */
+    public void updateChannelName(long channelId, String channelName) {
+        databaseService.runInThreadTransaction(session -> {
+            var hql =
+                """
+                UPDATE ChannelEntity ch
+                SET ch.name = :channelName
+                WHERE ch.id = :channelId
+                """;
+            session.createQuery(hql, Object.class)
+                .setParameter("channelId", channelId)
+                .setParameter("channelName", channelName)
+                .executeUpdate();
+            return null;
+        });
+    }
 }

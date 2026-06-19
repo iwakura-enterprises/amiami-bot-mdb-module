@@ -162,7 +162,6 @@ public class ProductProcessorService {
                 });
             }
 
-            // TODO: Protect against empty productCodes, prevent fetching all products out of a sudden?
             // These product codes where in the list previously but now they are removed.
             // Fetch them standalone and check their status & update
             if (!productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {

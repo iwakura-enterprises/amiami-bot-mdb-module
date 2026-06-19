@@ -19,6 +19,8 @@ import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 
 @Slf4j
 @Bean
@@ -32,6 +34,8 @@ public class AmiTracker extends Module {
     private final DatabaseService databaseService;
     private final AmiAmiQueryService amiAmiQueryService;
     private final ProductChangeAnnounceService productChangeAnnounceService;
+
+    private final List<ListenerAdapter> listeners;
 
     private final List<AmiTrackerCommand> discordCommands;
     private final List<GanyuCommand> consoleCommands;
@@ -64,6 +68,14 @@ public class AmiTracker extends Module {
         log.info("Stopping {} @ {}", info.getName(), info.getVersion());
 
         log.info("o/");
+    }
+
+    @Override
+    public void onShardManagerBuilderInitialization(@NonNull DefaultShardManagerBuilder shardManagerBuilder) {
+        listeners.forEach(listener -> {
+            log.info("Registering listener: {}", listener.getClass().getName());
+            shardManagerBuilder.addEventListeners(listener);
+        });
     }
 
     @Override

@@ -47,4 +47,26 @@ public class GuildRepository extends AmiBaseRepository<GuildEntity, Long> {
             });
         });
     }
+
+    /**
+     * Updates guild's name
+     *
+     * @param guildId   Guild ID
+     * @param guildName Guild name
+     */
+    public void updateGuildName(long guildId, String guildName) {
+        databaseService.runInThreadTransaction(session -> {
+            var hql =
+                """
+                UPDATE GuildEntity g
+                SET g.name = :guildName
+                WHERE g.id = :guildId
+                """;
+            session.createQuery(hql, Object.class)
+                .setParameter("guildId", guildId)
+                .setParameter("guildName", guildName)
+                .executeUpdate();
+            return null;
+        });
+    }
 }

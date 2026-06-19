@@ -22,7 +22,7 @@ public class UserService {
      * @return The existing or newly created UserEntity
      */
     public UserEntity getOrCreateUser(User user) {
-        return userRepository.getOrCreate(user.getIdLong(), user.getName());
+        return userRepository.getOrCreate(user.getIdLong(), user.getGlobalName());
     }
 
     /**
