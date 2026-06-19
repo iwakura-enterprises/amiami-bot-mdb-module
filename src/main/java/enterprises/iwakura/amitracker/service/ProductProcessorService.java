@@ -67,8 +67,6 @@ public class ProductProcessorService {
 
             var newProductCodesInListQuery = productListQueryRepository.findNewProductCodes(productListQueryEntity.getId(),
                 productCodes);
-            var removedProductCodesFromListQuery = productListQueryRepository.findRemovedProductCodes(
-                productListQueryEntity.getId(), productCodes);
 
             if (!newProductCodesInListQuery.isEmpty()) {
                 log.info("Found new product codes for product list query {}: {}",
@@ -161,27 +159,6 @@ public class ProductProcessorService {
                     }
                 });
             }
-
-            // These product codes where in the list previously but now they are removed.
-            // Fetch them standalone and check their status & update
-            if (!productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
-                if (!removedProductCodesFromListQuery.isEmpty()) {
-                    log.info("Product list query {} has {} removed product codes: {}",
-                        productListQueryEntity.getId(), removedProductCodesFromListQuery.size(), removedProductCodesFromListQuery
-                    );
-
-                    // Not runing produc query for them
-                    // They will be sorted as first, if the state changed
-                    // And if they were moved to the second page, then what gives.
-                    // They will be first again if they change.
-                    //removedProductCodesFromListQuery.forEach(productCode ->
-                    //    productQuerySchedulerBeanAccessor.getBeanInstance().runProductQuery(productCode));
-                }
-            }
-
-            // Remove them so they are not queried again
-            // Not removing to prevent double sending of new products
-            //productListQueryRepository.removeResultEntriesByProductCodes(productListQueryEntity.getId(), removedProductCodesFromListQuery);
 
             if (productListQueryEntity.isSkipNextProductAddOrRemoveChangeAnnouncements()) {
                 log.info("The next product list query process for ID {} will announce new/removed products", productListQueryEntity.getId());

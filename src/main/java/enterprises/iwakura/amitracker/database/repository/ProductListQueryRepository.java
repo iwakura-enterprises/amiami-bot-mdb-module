@@ -88,47 +88,6 @@ public class ProductListQueryRepository extends AmiBaseRepository<ProductListQue
     }
 
     /**
-     * Finds product codes that are present in the stored results for the given query entity
-     * but are not present in the provided list of product codes.
-     *
-     * @param productListQueryEntityId Product list query entity ID
-     * @param productCodes             Current product codes to check against
-     *
-     * @return List
-     * of removed product codes
-     */
-    public List<String> findRemovedProductCodes(Long productListQueryEntityId, List<String> productCodes) {
-        if (productCodes == null || productCodes.isEmpty()) {
-            // If no current codes provided, all stored codes are "removed"
-            return databaseService.runInThreadTransaction(session -> {
-                var sql = """
-                    SELECT p.code
-                    FROM product_list_query_result_entry e
-                    JOIN product p ON p.id = e.product_id
-                    WHERE e.productListQuery_id = :queryId
-                    """;
-                return session.createNativeQuery(sql, String.class)
-                    .setParameter("queryId", productListQueryEntityId)
-                    .list();
-            });
-        }
-        return databaseService.runInThreadTransaction(session -> {
-            var sql = """
-                SELECT p.code
-                FROM product_list_query_result_entry e
-                JOIN product p ON p.id = e.product_id
-                WHERE e.productListQuery_id = :queryId
-                EXCEPT
-                SELECT unnest(CAST(:productCodes AS text[]))
-                """;
-            return session.createNativeQuery(sql, String.class)
-                .setParameter("queryId", productListQueryEntityId)
-                .setParameter("productCodes", productCodes.toArray(String[]::new))
-                .list();
-        });
-    }
-
-    /**
      * Removes product list query result entries for the given query entity that match the provided product codes.
      *
      * @param id                  Product list query entity ID
