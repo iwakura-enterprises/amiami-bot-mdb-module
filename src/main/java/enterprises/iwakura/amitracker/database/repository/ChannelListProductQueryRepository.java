@@ -107,6 +107,29 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
     }
 
     /**
+     * Finds a {@link ChannelProductListQueryEntity} by channel ID and name (case-insensitive)
+     *
+     * @param channelId Channel ID
+     * @param name      Name
+     *
+     * @return Optional of ChannelProductListQueryEntity
+     */
+    public Optional<ChannelProductListQueryEntity> findByChannelIdAndName(long channelId, String name) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql = """
+                  FROM ChannelProductListQueryEntity c
+                  WHERE c.channel.id = :channelId
+                  AND LOWER(c.name) = LOWER(:name)
+                  """;
+
+            return session.createQuery(hql, ChannelProductListQueryEntity.class)
+                .setParameter("channelId", channelId)
+                .setParameter("name", name)
+                .uniqueResultOptional();
+        });
+    }
+
+    /**
      * Finds all {@link ChannelProductListQueryEntity} by their guild ID
      *
      * @param guildId Guild ID

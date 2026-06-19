@@ -277,9 +277,9 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
             return Result.REMOVE;
         });
 
-        // TODO: Limit to OPTIONS_MAX_AMOUNT
         var selectedRoles = entity.getRoleIdsToNotify().stream()
             .map(DefaultValue::role)
+            .limit(SelectMenu.OPTIONS_MAX_AMOUNT)
             .toList();
         var roleEntitySelectMenu = EntitySelectMenu.create("abc", SelectTarget.ROLE)
             .setDefaultValues(selectedRoles)
@@ -336,7 +336,7 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
                 var buttonHook = event.deferReply(true).complete();
 
                 var errorContext = productListService.createChannelProductListQuery(
-                    channel, entity, productSearchParameters
+                    channel, entity, productSearchParameters // Shouldn't be null
                 );
 
                 if (errorContext.isSuccess()) {
@@ -344,6 +344,7 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
                 } else {
                     switch (errorContext.getType()) {
                         case SEARCH_PARAMETERS_EMPTY -> buttonHook.editOriginal("No search parameters!").queue();
+                        case CHANNEL_PRODUCT_LIST_DUPLICATE_NAME -> buttonHook.editOriginal("Search notification with this name already exists in this channel!").queue();
                         default -> buttonHook.editOriginal("Unknown error.").queue();
                     }
                 }

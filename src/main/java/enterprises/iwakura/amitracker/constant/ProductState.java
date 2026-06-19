@@ -1,5 +1,7 @@
 package enterprises.iwakura.amitracker.constant;
 
+import java.awt.Color;
+
 import enterprises.iwakura.kirara.amiami.response.AmiAmiItemResponse;
 import enterprises.iwakura.kirara.amiami.response.AmiAmiSearchResponse.ResultItem;
 import lombok.Getter;
@@ -8,15 +10,16 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ProductState {
-    PRE_ORDER_AVAILABLE(true), // ok
-    PRE_ORDER_CLOSED(false), // ok
-    BACK_ORDER_AVAILABLE(true), // ok
-    BACK_ORDER_CLOSED(false), // ok
-    PRE_OWNED(true), // ok
-    IN_STOCK(true), // ok
-    ORDER_CLOSED(false);
+    PRE_ORDER_AVAILABLE(true, new Color(0x58F2DB)),
+    PRE_ORDER_CLOSED(false, new Color(0xED4245)),
+    BACK_ORDER_AVAILABLE(true, new Color(0xFEE75C)),
+    BACK_ORDER_CLOSED(false, new Color(0xED4245)),
+    PRE_OWNED(true, new Color(0xEB459E)),
+    IN_STOCK(true, new Color(0x57F287)),
+    ORDER_CLOSED(false, new Color(0x99AAB5));
 
     private final boolean inStock;
+    private final Color color;
 
     /**
      * Parses the product state from the given AmiAmi item.

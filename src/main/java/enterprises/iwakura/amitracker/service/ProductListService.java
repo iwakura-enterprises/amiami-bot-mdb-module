@@ -75,7 +75,12 @@ public class ProductListService {
         }
 
         return databaseService.runInThreadTransaction(session -> {
-            // TODO: Check if already exists by name, no duplicate names in the same channel
+            var existingChannelListProductQuery = channelListProductQueryRepository.findByChannelIdAndName(channel.getIdLong(), entity.getName());
+            if (existingChannelListProductQuery.isPresent()) {
+                return ErrorContext.of(Type.CHANNEL_PRODUCT_LIST_DUPLICATE_NAME, "Search notification %s already exists in channel %s".formatted(
+                    entity.getName(), channel.getName()
+                ));
+            }
 
             var channelEntity = channelRepository.getOrCreate(channel);
             var productListQuery = productListQueryRepository.getOrCreate(productSearchParameters);

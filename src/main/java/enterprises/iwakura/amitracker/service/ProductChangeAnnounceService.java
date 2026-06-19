@@ -1,5 +1,6 @@
 package enterprises.iwakura.amitracker.service;
 
+import java.awt.Color;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -334,10 +335,10 @@ public class ProductChangeAnnounceService {
         var descriptionSb = new StringBuilder();
         descriptionSb.append(productService.getBeanInstance().createProductInfoDescription(product));
 
-        // TODO: Color based on the announcements, e.g. price discount/open order = green, add new item = blue, otherwise red
         builder.setTitle(product.getName());
         builder.setUrl(amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()));
         builder.setImage(AmiTracker.AMI_AMI_IMAGE_URL.formatted(product.getImageUrl()));
+        builder.setColor(product.getProductState().getColor());
 
         if (!announcements.isEmpty()) {
             announcements.sort(Comparator.comparing(ProductChangeAnnouncementEntity::getCreatedAt).reversed());
