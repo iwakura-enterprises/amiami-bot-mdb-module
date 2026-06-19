@@ -40,10 +40,11 @@ public enum ProductState {
             }
         } else if (item.getPreownAttention() == 1) {
             return PRE_OWNED;
+        } else if (item.getOrderClosedFlag() == 1) {
+            return ORDER_CLOSED;
         } else if (item.getStock() == 1) {
             return IN_STOCK;
         }
-
         return ORDER_CLOSED;
     }
 
@@ -55,8 +56,8 @@ public enum ProductState {
      * @return parsed product state
      */
     public static ProductState parse(ResultItem item) {
-        if (item.getListPreorderAvailable() == 1) {
-            if (item.getInStockFlag() == 1) {
+        if (item.getPreOrderItem() == 1) {
+            if (item.getListPreorderAvailable() == 1) {
                 return PRE_ORDER_AVAILABLE;
             } else {
                 return PRE_ORDER_CLOSED;
@@ -67,12 +68,13 @@ public enum ProductState {
             } else {
                 return BACK_ORDER_CLOSED;
             }
-        } else if (item.getListPreOwnedAvailable() == 1) {
+        } else if (item.getPreownedSaleFlag() == 1) {
             return PRE_OWNED;
+        } else if (item.getOrderClosedFlag() == 1) {
+            return ORDER_CLOSED;
         } else if (item.getInStockFlag() == 1) {
             return IN_STOCK;
         }
-
         return ORDER_CLOSED;
     }
 
