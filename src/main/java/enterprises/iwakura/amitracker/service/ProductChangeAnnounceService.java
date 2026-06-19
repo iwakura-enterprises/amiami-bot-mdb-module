@@ -461,7 +461,7 @@ public class ProductChangeAnnounceService {
             );
             databaseService.runInThreadTransaction(session -> {
                 messageAnnouncements.forEach(entity -> {
-                    entity.setAnnouncementState(AnnouncementState.COMPLETED);
+                    entity.setAnnouncementState(AnnouncementState.FAILED);
                     entity.setSendLog("Failed due to error\n%s".formatted(ExceptionUtils.dumpExceptionStacktrace(failure)));
                     productChangeAnnouncementRepository.save(entity);
                 });
