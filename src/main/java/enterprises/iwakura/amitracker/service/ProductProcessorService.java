@@ -264,6 +264,10 @@ public class ProductProcessorService {
             log.info("Image URL changed!!!!!!!!!!!!: Search response: {}", Optional.ofNullable(searchResponses).orElse(List.of()));
         }
 
+        if (imageUrlChanged) {
+            productEntity.setImageUrl(newImageUrl);
+        }
+
         // Save even if price is not of discount
         if (productStateChanged || priceChanged) {
             // Add history

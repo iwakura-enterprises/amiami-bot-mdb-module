@@ -20,6 +20,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
 
 @Slf4j
@@ -76,6 +77,9 @@ public class AmiTracker extends Module {
             log.info("Registering listener: {}", listener.getClass().getName());
             shardManagerBuilder.addEventListeners(listener);
         });
+
+        shardManagerBuilder.enableIntents(GatewayIntent.MESSAGE_CONTENT);
+        shardManagerBuilder.enableIntents(GatewayIntent.GUILD_MESSAGES);
     }
 
     @Override

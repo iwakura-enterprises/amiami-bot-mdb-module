@@ -58,7 +58,7 @@ public class WishlistRemoveCommand extends WishlistSubCommand {
             return;
         }
 
-        productCode = URLHelper.extractProductCode(productCode);
+        productCode = URLHelper.extractProductCode(productCode, true);
 
         userService.getOrCreateUser(user);
         if (guild != null) {

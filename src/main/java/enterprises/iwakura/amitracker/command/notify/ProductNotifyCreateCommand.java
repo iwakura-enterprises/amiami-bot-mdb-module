@@ -43,7 +43,7 @@ public class ProductNotifyCreateCommand extends ProductNotifySubCommand {
         this.help = "Creates new product search notification in this channel";
 
         this.options = List.of(
-            new OptionData(OptionType.STRING, OPTION_NAME, "Name for the notification", true),
+            new OptionData(OptionType.STRING, OPTION_NAME, "Name for the notification", true).setMaxLength(100),
             new OptionData(OptionType.STRING, OPTION_SEARCH_URL, "The URL when searching for products on AmiAmi", true)
         );
 
@@ -68,6 +68,10 @@ public class ProductNotifyCreateCommand extends ProductNotifySubCommand {
         if (name == null || searchUrl == null) {
             event.reply("No name or search URL provided.").setEphemeral(true).queue();
             return;
+        }
+
+        if (name.length() > 100) {
+            name = name.substring(0, 100);
         }
 
         if (!channel.canTalk()) {

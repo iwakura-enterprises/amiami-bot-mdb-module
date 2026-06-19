@@ -1,5 +1,7 @@
 package enterprises.iwakura.amitracker.util;
 
+import java.util.regex.Pattern;
+
 import lombok.experimental.UtilityClass;
 
 /**
@@ -8,25 +10,28 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class URLHelper {
 
-    /**
-     * Extracts the product code from an AmiAmi product URL.
-     *
-     * @param amiamiUrl the AmiAmi product URL
-     * @return the extracted product code, or null if not found
-     */
-    public static String extractProductCode(String amiamiUrl) {
-        // e.g.
-        // https://www.amiami.com/eng/detail?gcode=GOODS-12345678
-        // https://www.amiami.com/eng/detail?scode=GOODS-12345678
+    private final Pattern AMIAMI_URL_PATTERN = Pattern.compile("https?://(?:www\\.)?amiami\\.com/[^\\s]*[?&](?:gcode|scode)=([A-Za-z0-9\\-]+)");
 
-        if (amiamiUrl != null) {
-            var parts = amiamiUrl.split("[?&]");
-            for (var part : parts) {
-                if (part.startsWith("gcode=") || part.startsWith("scode=")) {
-                    return part.split("=")[1];
-                }
-            }
+    /**
+     * Finds the first AmiAmi product URL in a string and extracts its product code.
+     *
+     * @param text                 the text to search for an AmiAmi URL
+     * @param returnTextIfNotFound Return text if code not found
+     *
+     * @return the extracted product code, or null if no AmiAmi URL is found
+     */
+    public static String extractProductCode(String text, boolean returnTextIfNotFound) {
+        if (text == null) {
+            return null;
         }
-        return amiamiUrl; // Fallback to returning the parameter itself
+        var matcher = AMIAMI_URL_PATTERN.matcher(text);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        if (returnTextIfNotFound) {
+            return text;
+        } else {
+            return null;
+        }
     }
 }

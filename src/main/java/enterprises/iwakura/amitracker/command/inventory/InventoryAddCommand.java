@@ -115,7 +115,7 @@ public class InventoryAddCommand extends InventorySubCommand {
             return false;
         }
 
-        productCode = URLHelper.extractProductCode(productCode);
+        productCode = URLHelper.extractProductCode(productCode, true);
 
         if (inventoryService.hasUserBoughtProduct(user.getIdLong(), productCode)) {
             // TODO: Show interactive message to confirm update

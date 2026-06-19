@@ -6,7 +6,6 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
 import enterprises.iwakura.amitracker.constant.Currency;
-import enterprises.iwakura.amitracker.database.entity.ProductChangeAnnouncementEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
@@ -65,7 +64,7 @@ public class ProductService {
      * @return a collection of choices for product codes
      */
     public Collection<Choice> suggestProductCodes(String searchQuery) {
-        var products = productRepository.suggestProductCodesFiltered(URLHelper.extractProductCode(searchQuery), OptionData.MAX_CHOICES);
+        var products = productRepository.suggestProductCodesFiltered(URLHelper.extractProductCode(searchQuery, true), OptionData.MAX_CHOICES);
         return products.stream()
             .map(product -> new ProductChoice(product).toChoice())
             .toList();
@@ -96,7 +95,7 @@ public class ProductService {
             sb.append("├  ");
         }
 
-        sb.append("`%s`".formatted(product.getCode()));
+        sb.append("`%s`\n".formatted(product.getCode()));
 
         if (productListQueryEntity != null) {
             sb.append("└  [Search link](%s)".formatted(productListQueryEntity.getProductSearchParameters().toUrl()));

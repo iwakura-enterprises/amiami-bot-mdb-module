@@ -72,7 +72,7 @@ public class WishlistAddCommand extends WishlistSubCommand {
             return false;
         }
 
-        productCode = URLHelper.extractProductCode(productCode);
+        productCode = URLHelper.extractProductCode(productCode, true);
 
         var errorContext = wishlistService.addProductToWishlist(user.getIdLong(), wishlistName, productCode);
 

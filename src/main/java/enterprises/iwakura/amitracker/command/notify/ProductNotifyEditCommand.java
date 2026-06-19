@@ -244,7 +244,7 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
         var components = new ArrayList<ContainerChildComponent>();
         interactableMessage.addInteractionRule(InteractionRules.allowUsers(user));
 
-        components.add(TextDisplay.of("### Product search notification - %s".formatted(StringUtils.capitalize(entity.getName()))));
+        components.add(TextDisplay.of("### Product search notification - %s".formatted(StringUtils.capitalizeAllWords(entity.getName()))));
         components.add(Separator.createDivider(Spacing.SMALL));
 
         var priceDiscountButton = interactableMessage.addInteraction(Interaction.asButton(createToggleButton(entity.isPriceDiscountEnabled())), event -> {

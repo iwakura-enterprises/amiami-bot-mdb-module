@@ -56,7 +56,7 @@ public class InventoryRemoveCommand extends InventorySubCommand {
             guildService.getOrCreateGuild(guild);
         }
 
-        productCode = URLHelper.extractProductCode(productCode);
+        productCode = URLHelper.extractProductCode(productCode, true);
 
         boolean removed = inventoryService.removeProductFromInventory(user.getIdLong(), productCode);
 

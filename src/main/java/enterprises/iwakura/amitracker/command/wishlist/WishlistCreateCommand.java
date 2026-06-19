@@ -36,7 +36,7 @@ public class WishlistCreateCommand extends WishlistSubCommand {
         this.help = "Create new wishlist";
 
         this.options = List.of(
-            new OptionData(OptionType.STRING, OPTION_WISHLIST_NAME, "Wishlist name", true)
+            new OptionData(OptionType.STRING, OPTION_WISHLIST_NAME, "Wishlist name", true).setMaxLength(100)
         );
     }
 
@@ -45,6 +45,15 @@ public class WishlistCreateCommand extends WishlistSubCommand {
         var user = event.getUser();
         var guild = event.getGuild();
         var wishlistName = event.getOption(OPTION_WISHLIST_NAME, Constants.DEFAULT_WISHLIST_NAME, OptionMapping::getAsString);
+
+        if (wishlistName == null) {
+            event.reply("No wishlist name specified!").setEphemeral(true).queue();
+            return;
+        }
+
+        if (wishlistName.length() > 100) {
+            wishlistName = wishlistName.substring(0, 100);
+        }
 
         var hook = event.deferReply(true).complete();
 
