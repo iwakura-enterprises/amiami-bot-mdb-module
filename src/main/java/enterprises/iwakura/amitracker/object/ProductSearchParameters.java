@@ -1,8 +1,10 @@
 package enterprises.iwakura.amitracker.object;
 
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import enterprises.iwakura.amitracker.service.AmiAmiApiService;
 import lombok.Data;
 
 @Data
@@ -114,6 +116,54 @@ public class ProductSearchParameters {
             sb.append("Series Title: ").append(seriesTitleId).append("\n");
 
         return sb.toString().stripTrailing();
+    }
+
+    public String toUrl() {
+        if (isEmpty()) {
+            return "%s/eng/search/list/".formatted(AmiAmiApiService.AMIAMI_URL);
+        }
+
+        var sb = new StringBuilder("%s/eng/search/list/?".formatted(AmiAmiApiService.AMIAMI_URL));
+        if (searchKeywords != null && !searchKeywords.isBlank())
+            sb.append("s_keywords=").append(URLEncoder.encode(searchKeywords, StandardCharsets.UTF_8)).append("&");
+        if (filterAnyAvailability != null && filterAnyAvailability)
+            sb.append("s_st_list_any_available=1&");
+        if (filterPreOrder != null && filterPreOrder)
+            sb.append("s_st_list_preorder_available=1&");
+        if (filterBackOrder != null && filterBackOrder)
+            sb.append("s_st_list_backorder_available=1&");
+        if (filterNewItems != null && filterNewItems)
+            sb.append("s_st_list_newitem_available=1&");
+        if (filterPreOwnedItems != null && filterPreOwnedItems)
+            sb.append("s_st_condition_flg=1&");
+        if (filterAmiAmiBonus != null && filterAmiAmiBonus)
+            sb.append("s_st_list_store_bonus=1&");
+        if (filterOnSaleItems != null && filterOnSaleItems)
+            sb.append("s_st_saleitem=1&");
+        if (category1Id != null)
+            sb.append("s_cate1=").append(category1Id).append("&");
+        if (category2Id != null)
+            sb.append("s_cate2=").append(category2Id).append("&");
+        if (category3Id != null)
+            sb.append("s_cate3=").append(category3Id).append("&");
+        if (category4Id != null)
+            sb.append("s_cate4=").append(category4Id).append("&");
+        if (categoryTagId != null)
+            sb.append("s_cate_tag=").append(categoryTagId).append("&");
+        if (characterNameId != null)
+            sb.append("s_charaname_search_id=").append(characterNameId).append("&");
+        if (makerId != null)
+            sb.append("s_maker_id=").append(makerId).append("&");
+        if (originalTitleId != null)
+            sb.append("s_originaltitle_id=").append(originalTitleId).append("&");
+        if (seriesTitleId != null)
+            sb.append("s_seriestitle_id=").append(seriesTitleId).append("&");
+
+        if (sb.charAt(sb.length() - 1) == '&') {
+            sb.deleteCharAt(sb.length() - 1);
+        }
+
+        return sb.toString();
     }
 
     public boolean isEmpty() {

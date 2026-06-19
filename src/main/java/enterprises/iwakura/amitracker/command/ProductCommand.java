@@ -89,7 +89,7 @@ public class ProductCommand extends AmiTrackerCommand {
             amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode())
         )));
         components.add(Separator.createDivider(Spacing.SMALL));
-        components.add(TextDisplay.of(productService.createProductInfoDescription(product)));
+        components.add(TextDisplay.of(productService.createProductInfoDescription(product, null)));
         components.add(Separator.createDivider(Spacing.SMALL));
         components.add(TextDisplay.of("### Price history\nTODO"));
         components.add(Separator.createDivider(Spacing.SMALL));

@@ -20,6 +20,7 @@ import enterprises.iwakura.amitracker.AmiTracker;
 import enterprises.iwakura.amitracker.constant.AnnouncementState;
 import enterprises.iwakura.amitracker.constant.Currency;
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
+import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductChangeAnnouncementEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
@@ -331,9 +332,15 @@ public class ProductChangeAnnounceService {
      * @return Embed builder
      */
     private EmbedBuilder createEmbed(ProductEntity product, List<ProductChangeAnnouncementEntity> announcements) {
+        var productListQuery = announcements.stream()
+            .map(ProductChangeAnnouncementEntity::getChannelProductListQuery)
+            .findAny()
+            .map(ChannelProductListQueryEntity::getProductListQuery)
+            .orElse(null);
+
         var builder = new EmbedBuilder();
         var descriptionSb = new StringBuilder();
-        descriptionSb.append(productService.getBeanInstance().createProductInfoDescription(product));
+        descriptionSb.append(productService.getBeanInstance().createProductInfoDescription(product, productListQuery));
 
         builder.setTitle(product.getName());
         builder.setUrl(amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()));

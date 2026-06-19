@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class AmiAmiApiService extends AmiAmiApi {
 
+    public static final String AMIAMI_URL = "https://www.amiami.com";
     public static final Long MAX_ITEMS_PER_QUERY = 50L;
 
     public AmiAmiApiService(Gson gson) {
@@ -25,6 +26,6 @@ public class AmiAmiApiService extends AmiAmiApi {
      * @return the URL to the AmiAmi product detail page
      */
     public String createAmiAmiProductDetailUrl(String productCode) {
-        return String.format("https://www.amiami.com/eng/detail/?gcode=%s", productCode);
+        return String.format("%s/eng/detail/?gcode=%s", AMIAMI_URL, productCode);
     }
 }

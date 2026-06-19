@@ -6,7 +6,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
 import enterprises.iwakura.amitracker.constant.Currency;
+import enterprises.iwakura.amitracker.database.entity.ProductChangeAnnouncementEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
+import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
 import enterprises.iwakura.amitracker.exception.QueryFailedException;
 import enterprises.iwakura.amitracker.object.ProductChoice;
@@ -76,20 +78,30 @@ public class ProductService {
      *
      * @return String containing some info
      */
-    public String createProductInfoDescription(ProductEntity product) {
+    public String createProductInfoDescription(
+        ProductEntity product,
+        ProductListQueryEntity productListQueryEntity
+    ) {
+        var sb = new StringBuilder();
+
         // TODO: Guild / user settings regarding pricing
-        return """
-               ├  Price: **%s %s**
-               ├  State: **%s**
-               ├  Maker: %s
-               ├  Release: %s
-               └  `%s`
-               """.formatted(
-            product.getPriceJpy(), Currency.JPY.getSymbol(),
-            product.getProductState(),
-            Optional.ofNullable(product.getMakerName()).orElse("N/A"),
-            Optional.ofNullable(product.getReleaseDate()).map(LocalDate::toString).orElse("N/A"),
-            product.getCode()
-        );
+        sb.append("├  Price: **%s %s**\n".formatted(product.getPriceJpy(), Currency.JPY.getSymbol()));
+        sb.append("├  State: **%s**\n".formatted(product.getProductState()));
+        sb.append("├  Maker: %s\n".formatted(Optional.ofNullable(product.getMakerName()).orElse("N/A")));
+        sb.append("├  Release: %s\n".formatted(Optional.ofNullable(product.getReleaseDate()).map(LocalDate::toString).orElse("N/A")));
+
+        if (productListQueryEntity == null) {
+            sb.append("└  ");
+        } else {
+            sb.append("├  ");
+        }
+
+        sb.append("`%s`".formatted(product.getCode()));
+
+        if (productListQueryEntity != null) {
+            sb.append("└  [Search link](%s)".formatted(productListQueryEntity.getProductSearchParameters().toUrl()));
+        }
+
+        return sb.toString();
     }
 }

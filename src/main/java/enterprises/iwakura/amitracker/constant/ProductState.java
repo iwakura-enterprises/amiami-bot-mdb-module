@@ -10,13 +10,14 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ProductState {
-    PRE_ORDER_AVAILABLE(true, new Color(0x58F2DB)),
-    PRE_ORDER_CLOSED(false, new Color(0xED4245)),
-    BACK_ORDER_AVAILABLE(true, new Color(0xFEE75C)),
-    BACK_ORDER_CLOSED(false, new Color(0xED4245)),
-    PRE_OWNED(true, new Color(0xEB459E)),
-    IN_STOCK(true, new Color(0x57F287)),
-    ORDER_CLOSED(false, new Color(0x99AAB5));
+    // Colors from https://catppuccin.com (MIT License)
+    PRE_ORDER_AVAILABLE(true, new Color(0x7dc4e4)),
+    PRE_ORDER_CLOSED(false, new Color(0xed8796)),
+    BACK_ORDER_AVAILABLE(true, new Color(0xeed49f)),
+    BACK_ORDER_CLOSED(false, new Color(0xed8796)),
+    PRE_OWNED(true, new Color(0x8bd5ca)),
+    IN_STOCK(true, new Color(0xa6da95)),
+    ORDER_CLOSED(false, new Color(0xa5adcb));
 
     private final boolean inStock;
     private final Color color;
