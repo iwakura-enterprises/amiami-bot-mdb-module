@@ -1,13 +1,11 @@
 package enterprises.iwakura.amitracker.service;
 
-import java.awt.Color;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -17,7 +15,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 
 import enterprises.iwakura.amitracker.AmiTracker;
-import enterprises.iwakura.amitracker.constant.AnnouncementState;
+import enterprises.iwakura.amitracker.constant.QueueState;
 import enterprises.iwakura.amitracker.constant.Currency;
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
@@ -26,7 +24,6 @@ import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
 import enterprises.iwakura.amitracker.database.repository.ChannelListProductQueryRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductChangeAnnouncementRepository;
-import enterprises.iwakura.amitracker.database.repository.WishlistEntryRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistRepository;
 import enterprises.iwakura.amitracker.object.MessageTarget;
 import enterprises.iwakura.amitracker.object.ProductChangeHolder;
@@ -104,7 +101,7 @@ public class ProductChangeAnnounceService {
 
         announcements.addAll(wishlists.stream().map(wishlist -> productChangeAnnouncementRepository.save(
             ProductChangeAnnouncementEntity.builder()
-                .announcementState(AnnouncementState.QUEUED)
+                .announcementState(QueueState.QUEUED)
                 .productChangeTypes(productChangeTypes)
                 .productEntity(productEntity)
                 .wishlist(wishlist)
@@ -115,7 +112,7 @@ public class ProductChangeAnnounceService {
         announcements.addAll(channelProductListQueryEntries.stream()
             .map(channelProductListQueryEntity -> productChangeAnnouncementRepository.save(
                 ProductChangeAnnouncementEntity.builder()
-                    .announcementState(AnnouncementState.QUEUED)
+                    .announcementState(QueueState.QUEUED)
                     .productChangeTypes(productChangeTypes)
                     .productEntity(productEntity)
                     .channelProductListQuery(channelProductListQueryEntity)
@@ -141,7 +138,7 @@ public class ProductChangeAnnounceService {
         var announcements = channelProductListQueryEntries.stream()
             .map(channelProductListQueryEntity -> productChangeAnnouncementRepository.save(
                 ProductChangeAnnouncementEntity.builder()
-                    .announcementState(AnnouncementState.QUEUED)
+                    .announcementState(QueueState.QUEUED)
                     .productChangeTypes(PRODUCT_ADDED_LIST)
                     .productEntity(productEntity)
                     .channelProductListQuery(channelProductListQueryEntity)
@@ -160,7 +157,7 @@ public class ProductChangeAnnounceService {
         var queuedProductAnnouncements = databaseService.runInThreadTransaction(session -> {
             var announcements = productChangeAnnouncementRepository.findAllQueued();
             announcements.forEach(entity -> {
-                entity.setAnnouncementState(AnnouncementState.PROCESSING);
+                entity.setAnnouncementState(QueueState.PROCESSING);
                 productChangeAnnouncementRepository.save(entity);
             });
             return announcements;
@@ -347,6 +344,10 @@ public class ProductChangeAnnounceService {
         builder.setImage(AmiTracker.AMI_AMI_IMAGE_URL.formatted(product.getImageUrl()));
         builder.setColor(product.getProductState().getColor());
 
+        if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
+            builder.setFooter("Once the image is available, you will be notified.");
+        }
+
         if (!announcements.isEmpty()) {
             announcements.sort(Comparator.comparing(ProductChangeAnnouncementEntity::getCreatedAt).reversed());
             builder.setTimestamp(announcements.getFirst().getCreatedAt().toInstant());
@@ -413,8 +414,8 @@ public class ProductChangeAnnounceService {
                 case PRODUCT_LIST_NEW_PRODUCT -> {
                     sb.append("- Product appeared in the search results");
                 }
-                case EXPERIMENTAL_IMAGE_URL_CHANGE -> {
-                    sb.append("- (EXPERIMENTAL) Image URL changed");
+                case IMAGE_URL_CHANGE -> {
+                    sb.append("- Image changed");
                 }
             }
         }
@@ -435,7 +436,7 @@ public class ProductChangeAnnounceService {
             );
             databaseService.runInThreadTransaction(session -> {
                 messageAnnouncements.forEach(entity -> {
-                    entity.setAnnouncementState(AnnouncementState.COMPLETED);
+                    entity.setAnnouncementState(QueueState.COMPLETED);
                     entity.setSendLog("Sent via message %d".formatted(message.getIdLong()));
                     productChangeAnnouncementRepository.save(entity);
                 });
@@ -461,7 +462,7 @@ public class ProductChangeAnnounceService {
             );
             databaseService.runInThreadTransaction(session -> {
                 messageAnnouncements.forEach(entity -> {
-                    entity.setAnnouncementState(AnnouncementState.FAILED);
+                    entity.setAnnouncementState(QueueState.FAILED);
                     entity.setSendLog("Failed due to error\n%s".formatted(ExceptionUtils.dumpExceptionStacktrace(failure)));
                     productChangeAnnouncementRepository.save(entity);
                 });
@@ -488,7 +489,14 @@ public class ProductChangeAnnounceService {
             return new MessageTarget(entity.getWishlist().getUser().getId());
         } else if (entity.getChannelProductListQuery() != null) {
             var productListQuery = entity.getChannelProductListQuery();
-            return new MessageTarget(productListQuery.getChannel().getId(), productListQuery.getChannel().getGuild().getId(), productListQuery.getRoleIdsToNotify());
+            var rolesToPing = new HashSet<>(productListQuery.getRoleIdsToNotify());
+
+            // If only image URL change, don't ping any roles
+            if (entity.getProductChangeTypes().contains(ProductChangeType.IMAGE_URL_CHANGE) && entity.getProductChangeTypes().size() == 1) {
+                rolesToPing.clear();
+            }
+
+            return new MessageTarget(productListQuery.getChannel().getId(), productListQuery.getChannel().getGuild().getId(), rolesToPing);
         } else {
             return null;
         }

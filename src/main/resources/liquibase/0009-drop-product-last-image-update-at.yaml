@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0009-drop-product-last-image-update-at-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropColumn:
+            tableName: product
+            columnName: lastImageUpdateAt

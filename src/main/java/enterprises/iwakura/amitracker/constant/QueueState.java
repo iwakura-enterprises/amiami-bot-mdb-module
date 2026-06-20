@@ -1,6 +1,6 @@
 package enterprises.iwakura.amitracker.constant;
 
-public enum AnnouncementState {
+public enum QueueState {
     QUEUED,
     PROCESSING,
     COMPLETED,

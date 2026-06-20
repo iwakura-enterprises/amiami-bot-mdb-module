@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AmiAmiApiService extends AmiAmiApi {
 
     public static final String AMIAMI_URL = "https://www.amiami.com";
+    public static final String NO_IMAGE_URL = "/images/product/main/noimage_e.jpg";
     public static final Long MAX_ITEMS_PER_QUERY = 50L;
 
     public AmiAmiApiService(Gson gson) {

@@ -7,11 +7,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import enterprises.iwakura.amitracker.constant.AnnouncementState;
+import enterprises.iwakura.amitracker.constant.QueueState;
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.object.ProductChangeHolder;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -43,7 +41,7 @@ public class ProductChangeAnnouncementEntity {
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
     @Enumerated(value = EnumType.STRING)
-    private AnnouncementState announcementState;
+    private QueueState announcementState;
 
     private String sendLog;
 

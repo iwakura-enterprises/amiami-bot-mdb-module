@@ -2,7 +2,7 @@ package enterprises.iwakura.amitracker.database.repository;
 
 import java.util.List;
 
-import enterprises.iwakura.amitracker.constant.AnnouncementState;
+import enterprises.iwakura.amitracker.constant.QueueState;
 import enterprises.iwakura.amitracker.database.entity.ProductChangeAnnouncementEntity;
 import enterprises.iwakura.amitracker.service.DatabaseService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
@@ -41,7 +41,7 @@ public class ProductChangeAnnouncementRepository extends AmiBaseRepository<Produ
                       WHERE announcementState = :state AND (wishlist IS NOT NULL OR channelProductListQuery IS NOT NULL)
                       """;
             return session.createQuery(hql, ProductChangeAnnouncementEntity.class)
-                .setParameter("state", AnnouncementState.QUEUED)
+                .setParameter("state", QueueState.QUEUED)
                 .getResultList();
         });
     }

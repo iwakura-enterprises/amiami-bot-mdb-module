@@ -46,6 +46,8 @@ public class ProductHistoryEntity {
     @Enumerated(EnumType.STRING)
     private ProductState productState;
 
+    // TODO: Add json
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "product_id")
     private ProductEntity product;

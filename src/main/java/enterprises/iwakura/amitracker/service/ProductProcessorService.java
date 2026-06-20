@@ -10,10 +10,12 @@ import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 
+import enterprises.iwakura.amitracker.constant.ImageRefreshReason;
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
+import enterprises.iwakura.amitracker.database.repository.ProductImageRefreshRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductListQueryRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductQueryResultEntryRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
@@ -36,11 +38,12 @@ public class ProductProcessorService {
 
     private final DatabaseService databaseService;
     private final ProductHistoryService productHistoryService;
+    private final ProductChangeAnnounceService productChangeAnnounceService;
 
     private final ProductRepository productRepository;
     private final ProductListQueryRepository productListQueryRepository;
     private final ProductQueryResultEntryRepository productQueryResultEntryRepository;
-    private final ProductChangeAnnounceService productChangeAnnounceService;
+    private final ProductImageRefreshRepository productImageRefreshRepository;
 
     private final Gson gson;
 
@@ -237,8 +240,7 @@ public class ProductProcessorService {
             productChangeTypes.add(ProductChangeType.PRICE_DISCOUNT);
         }
         if (imageUrlChanged) {
-            productChangeTypes.add(ProductChangeType.EXPERIMENTAL_IMAGE_URL_CHANGE);
-            log.info("Image URL changed!!!!!!!!!!!!: Search response: {}", Optional.ofNullable(searchResponses).orElse(List.of()));
+            productChangeTypes.add(ProductChangeType.IMAGE_URL_CHANGE);
         }
 
         if (imageUrlChanged) {
@@ -296,6 +298,11 @@ public class ProductProcessorService {
             product.setResponseJson(gson.toJson(item));
             var savedProduct = productRepository.save(product);
             productHistoryService.initialize(savedProduct);
+
+            if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
+                productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);
+            }
+
             return savedProduct;
         });
     }
@@ -320,6 +327,11 @@ public class ProductProcessorService {
             product.setResponseJson(gson.toJson(resultItem));
             var savedProduct = productRepository.save(product);
             productHistoryService.initialize(savedProduct);
+
+            if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
+                productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);
+            }
+
             return savedProduct;
         });
     }

@@ -22,6 +22,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -52,8 +53,6 @@ public class ProductEntity {
 
     private String imageUrl;
 
-    private OffsetDateTime lastImageUpdateAt;
-
     /**
      * Latest lowest price in JPY. Items that are Pre-Owned may include more prices due to
      * more offerings.
@@ -75,4 +74,7 @@ public class ProductEntity {
      */
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "product")
     private List<ProductHistoryEntity> history = new ArrayList<>();
+
+    @OneToOne(mappedBy = "product")
+    private ProductImageRefreshEntity productImageRefresh;
 }

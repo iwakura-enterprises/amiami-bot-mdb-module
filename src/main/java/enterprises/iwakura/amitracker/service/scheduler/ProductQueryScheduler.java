@@ -1,14 +1,20 @@
 package enterprises.iwakura.amitracker.service.scheduler;
 
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import enterprises.iwakura.amitracker.constant.QueueState;
+import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
 import enterprises.iwakura.amitracker.database.entity.WishlistEntryEntity;
+import enterprises.iwakura.amitracker.database.repository.ProductImageRefreshRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductListQueryRepository;
+import enterprises.iwakura.amitracker.database.repository.ProductRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistEntryRepository;
 import enterprises.iwakura.amitracker.exception.MissingEntityException;
 import enterprises.iwakura.amitracker.exception.QueryFailedException;
@@ -35,6 +41,8 @@ public class ProductQueryScheduler extends BaseScheduler {
     private final DatabaseService databaseService;
     private final ProductListQueryRepository productListQueryRepository;
     private final WishlistEntryRepository wishlistEntryRepository;
+    private final ProductRepository productRepository;
+    private final ProductImageRefreshRepository productImageRefreshRepository;
 
     private final AmiAmiQueryService amiAmiQueryService;
     private final ProductProcessorService productProcessorService;
@@ -47,6 +55,7 @@ public class ProductQueryScheduler extends BaseScheduler {
         log.info("Initializing ProductQueryScheduler...");
         this.schedule("ProductQueryFindPending", 0, 10, TimeUnit.SECONDS, this::processPendingQueries);
         this.schedule("WishlistEntryFindPending", 5, 10, TimeUnit.SECONDS, this::processWishlistProducts);
+        this.schedule("ProductImageRefreshFindPending", 10, 60, TimeUnit.SECONDS, this::processProductImageRefresh);
     }
 
     /**
@@ -83,6 +92,91 @@ public class ProductQueryScheduler extends BaseScheduler {
                 pendingWishlistEntries.forEach(entry -> concurrencyService.scheduleQuery(() -> runProductQuery(entry.getProduct().getCode())));
             }
         });
+    }
+
+    /**
+     * Finds and schedules all product image refreshments
+     */
+    private void processProductImageRefresh() {
+        var productQueryConfig = configurationService.getProductQuery();
+
+        // Get image refreshments to process
+        var pendingImageRefreshments = databaseService.runInThreadTransaction(outerSession -> {
+            var results = productImageRefreshRepository.findAllPending();
+            results.forEach(it -> it.setState(QueueState.PROCESSING));
+            results.forEach(productImageRefreshRepository::save); // Save
+            return results;
+        });
+
+        if (pendingImageRefreshments.isEmpty()) {
+            return;
+        }
+
+        var ids = pendingImageRefreshments.stream().map(e -> e.getId().toString()).reduce((a, b) -> a + ", " + b).orElse("");
+        log.debug("Found {} pending image refreshments to process: {}", pendingImageRefreshments.size(), ids);
+        pendingImageRefreshments.forEach(entry -> concurrencyService.scheduleQuery(() -> {
+            // Run the query, should update ProductEntity with new imageUrl, if found
+            runProductQuery(entry.getProduct().getCode());
+
+            // Run transaction after the product query so we have new stuff
+            databaseService.runInThreadTransaction(session -> {
+                var optionalProductRefreshEntity = productImageRefreshRepository.findById(entry.getId());
+
+                if (optionalProductRefreshEntity.isPresent()) {
+                    var productRefreshEntity = optionalProductRefreshEntity.get();
+
+                    var optionalProduct = productRepository.findByCode(entry.getProduct().getCode());
+                    if (optionalProduct.isPresent()) {
+                        var product = optionalProduct.get();
+
+                        switch (productRefreshEntity.getRefreshReason()) {
+                            case NO_IMAGE -> {
+                                if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
+                                    // Still no image
+                                    int retryNumber = Optional.ofNullable(productRefreshEntity.getRetryNumber()).orElse(0);
+
+                                    if (retryNumber >= productQueryConfig.getNoImageMaxRetryCount()) {
+                                        log.warn("Image for product {} not found even after {} retries! Too bad. Removing product image refresh entity {}",
+                                            product.getCode(), retryNumber, productRefreshEntity.getId()
+                                        );
+                                        productImageRefreshRepository.delete(productRefreshEntity);
+                                    } else {
+                                        retryNumber = retryNumber + 1;
+                                        var nextSchedule = OffsetDateTime.now().plus(
+                                            (long) Math.pow(
+                                                productQueryConfig.getNoImageRefreshBackOffBase(),
+                                                retryNumber
+                                            ),
+                                            ChronoUnit.MILLIS
+                                        );
+                                        log.info("Image for product {} not found, retry no. {}/{}, next try @ {} in product image refresh enttiy {}",
+                                            product.getCode(), retryNumber, productQueryConfig.getNoImageMaxRetryCount(), nextSchedule, productRefreshEntity.getId()
+                                        );
+                                        productRefreshEntity.setRefreshAfter(nextSchedule);
+                                        productRefreshEntity.setState(QueueState.QUEUED);
+                                        productRefreshEntity.setRetryNumber(retryNumber);
+                                        productImageRefreshRepository.save(productRefreshEntity);
+                                    }
+                                } else {
+                                    // Found image! It should be sent to corresponding channels
+                                    log.info("Image for product {} found, removing product image refresh entity {}: {}",
+                                        product.getCode(), productRefreshEntity.getId(), product.getImageUrl()
+                                    );
+                                    productImageRefreshRepository.delete(productRefreshEntity);
+                                }
+                            }
+                        }
+                    } else {
+                        log.error("Product not found by code in inner query scheduled runnable! Removing product image refresh entity {}",
+                            productRefreshEntity.getId()
+                        );
+                        productImageRefreshRepository.delete(productRefreshEntity);
+                    }
+                } else {
+                    log.error("ProductImageRefreshEntity {} not found in inner query scheduled runnable!", entry.getId());
+                }
+            });
+        }));
     }
 
     /**

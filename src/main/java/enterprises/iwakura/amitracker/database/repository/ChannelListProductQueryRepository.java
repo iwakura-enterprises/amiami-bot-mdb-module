@@ -52,9 +52,9 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
             boolean checkPriceDiscount = productChangeTypes.contains(ProductChangeType.PRICE_DISCOUNT);
             boolean checkStockChange = productChangeTypes.contains(ProductChangeType.PRODUCT_STATE_CHANGED);
             boolean checkNewProducts = productChangeTypes.contains(ProductChangeType.PRODUCT_LIST_NEW_PRODUCT);
-            boolean experimentalImageUrlChanged = productChangeTypes.contains(ProductChangeType.EXPERIMENTAL_IMAGE_URL_CHANGE);
+            boolean imageUrlChanged = productChangeTypes.contains(ProductChangeType.IMAGE_URL_CHANGE);
 
-            if (!checkPriceDiscount && !checkStockChange && !checkNewProducts && !experimentalImageUrlChanged) {
+            if (!checkPriceDiscount && !checkStockChange && !checkNewProducts && !imageUrlChanged) {
                 return List.of();
             }
 
@@ -71,7 +71,10 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
                           OR
                           (:checkNewProducts = true AND c.newProductsEnabled = true)
                           OR
-                          (:experimentalImageUrlChanged = true)
+                          (:imageUrlChanged = true AND EXISTS (
+                              SELECT 1 FROM ProductChangeAnnouncementEntity a
+                              WHERE a.channelProductListQuery = c AND a.productEntity = :product
+                          ))
                       )
                       """;
 
@@ -81,7 +84,7 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
                 .setParameter("checkPriceDiscount", checkPriceDiscount)
                 .setParameter("checkStockChange", checkStockChange)
                 .setParameter("checkNewProducts", checkNewProducts)
-                .setParameter("experimentalImageUrlChanged", experimentalImageUrlChanged)
+                .setParameter("imageUrlChanged", imageUrlChanged)
                 .getResultList();
         });
     }

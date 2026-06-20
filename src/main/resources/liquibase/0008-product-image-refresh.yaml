@@ -1,0 +1,51 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0008-product-image-refresh-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: product_image_refresh
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_product_image_refresh
+                  name: id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: product_id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: state
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: refreshReason
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: refreshAfter
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: retryNumber
+                  type: INT
+  - changeSet:
+      id: 0008-product-image-refresh-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: product_id
+            baseTableName: product_image_refresh
+            constraintName: FK_PRODUCT_IMAGE_REFRESH_ON_PRODUCT
+            referencedColumnNames: id
+            referencedTableName: product

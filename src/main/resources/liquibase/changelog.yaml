@@ -20,3 +20,9 @@ databaseChangeLog:
   - include:
       file: 0007-product-and-query-json-response.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0008-product-image-refresh.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 0009-drop-product-last-image-update-at.yaml
+      relativeToChangelogFile: true
