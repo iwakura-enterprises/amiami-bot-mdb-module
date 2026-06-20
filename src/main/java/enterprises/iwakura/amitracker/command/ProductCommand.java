@@ -2,16 +2,21 @@ package enterprises.iwakura.amitracker.command;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import org.jspecify.annotations.NonNull;
 
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
 import enterprises.iwakura.amitracker.AmiTracker;
+import enterprises.iwakura.amitracker.database.entity.GuildEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
+import enterprises.iwakura.amitracker.database.entity.UserEntity;
 import enterprises.iwakura.amitracker.service.AmiAmiApiService;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
+import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.ProductService;
+import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.cirno.StringUtils;
 import enterprises.iwakura.jdainteractables.InteractionRules;
@@ -37,13 +42,19 @@ public class ProductCommand extends AmiTrackerCommand {
 
     public static final String OPTION_PRODUCT_CODE = "product-code";
 
+    private final UserService userService;
+    private final GuildService guildService;
     private final ProductService productService;
     private final AmiAmiApiService amiAmiApiService;
 
-    public ProductCommand(ConcurrencyService concurrencyService, ProductService productService,
+    public ProductCommand(ConcurrencyService concurrencyService,
+        UserService userService,
+        GuildService guildService, ProductService productService,
         AmiAmiApiService amiAmiApiService
     ) {
         super(concurrencyService);
+        this.userService = userService;
+        this.guildService = guildService;
         this.productService = productService;
         this.amiAmiApiService = amiAmiApiService;
 
@@ -68,6 +79,9 @@ public class ProductCommand extends AmiTrackerCommand {
             return;
         }
 
+        var userEntity = userService.getOrCreateUser(user);
+        var guildEntity = Optional.ofNullable(guild).map(guildService::getOrCreateGuild).orElse(null);
+
         productCode = URLHelper.extractProductCode(productCode, true);
         log.info("User {} requesting product {}", user.getIdLong(), productCode);
 
@@ -81,11 +95,15 @@ public class ProductCommand extends AmiTrackerCommand {
         var product = optionalProduct.get();
         var interactableMessage = new InteractableMessage();
         interactableMessage.addInteractionRule(InteractionRules.allowUsers(user));
-        var messageBuilder = createProductMessage(product);
+        var messageBuilder = createProductMessage(guildEntity, userEntity, product);
         hook.editOriginal(messageBuilder.build()).queue(interactableMessage.registerOnCompleted());
     }
 
-    public MessageEditBuilder createProductMessage(ProductEntity product) {
+    public MessageEditBuilder createProductMessage(
+        GuildEntity guildEntity,
+        UserEntity userEntity,
+        ProductEntity product
+    ) {
         var messageBuilder = new MessageEditBuilder().useComponentsV2();
         var components = new ArrayList<ContainerChildComponent>();
         components.add(TextDisplay.of("## [%s](%s)".formatted(
@@ -93,7 +111,7 @@ public class ProductCommand extends AmiTrackerCommand {
             amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode())
         )));
         components.add(Separator.createDivider(Spacing.SMALL));
-        components.add(TextDisplay.of(productService.createProductInfoDescription(product, null)));
+        components.add(TextDisplay.of(productService.createProductInfoDescription(guildEntity, userEntity, product, null)));
         components.add(Separator.createDivider(Spacing.SMALL));
         components.add(TextDisplay.of("### Price history\nTODO"));
         components.add(Separator.createDivider(Spacing.SMALL));

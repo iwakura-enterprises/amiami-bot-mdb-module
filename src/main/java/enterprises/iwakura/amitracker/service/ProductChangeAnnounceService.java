@@ -19,9 +19,11 @@ import enterprises.iwakura.amitracker.constant.QueueState;
 import enterprises.iwakura.amitracker.constant.Currency;
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
+import enterprises.iwakura.amitracker.database.entity.GuildEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductChangeAnnouncementEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
+import enterprises.iwakura.amitracker.database.entity.UserEntity;
 import enterprises.iwakura.amitracker.database.repository.ChannelListProductQueryRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductChangeAnnouncementRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistRepository;
@@ -189,7 +191,7 @@ public class ProductChangeAnnounceService {
 
             // Embeds per product, multiple ProductChangeAnnouncementEntities get merged into one embed
             Map<ProductEntity, EmbedBuilder> embedByProduct = groupedProducts.entrySet().stream()
-                .collect(Collectors.toMap(Entry::getKey, v -> createEmbed(v.getKey(), v.getValue())));
+                .collect(Collectors.toMap(Entry::getKey, v -> createEmbed(target.getGuild(), v.getKey(), v.getValue())));
 
             // Messages that will be sent out with the corresponding product change announcement entities
             Map<MessageCreateData, List<ProductChangeAnnouncementEntity>> messagesToSend = new HashMap<>();
@@ -328,7 +330,11 @@ public class ProductChangeAnnounceService {
      *
      * @return Embed builder
      */
-    private EmbedBuilder createEmbed(ProductEntity product, List<ProductChangeAnnouncementEntity> announcements) {
+    private EmbedBuilder createEmbed(
+        GuildEntity guildEntity,
+        ProductEntity product,
+        List<ProductChangeAnnouncementEntity> announcements
+    ) {
         var productListQuery = announcements.stream()
             .map(ProductChangeAnnouncementEntity::getChannelProductListQuery)
             .findAny()
@@ -337,7 +343,7 @@ public class ProductChangeAnnounceService {
 
         var builder = new EmbedBuilder();
         var descriptionSb = new StringBuilder();
-        descriptionSb.append(productService.getBeanInstance().createProductInfoDescription(product, productListQuery));
+        descriptionSb.append(productService.getBeanInstance().createProductInfoDescription(guildEntity, null, product, productListQuery));
 
         builder.setTitle(product.getName());
         builder.setUrl(amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()));
@@ -496,7 +502,7 @@ public class ProductChangeAnnounceService {
                 rolesToPing.clear();
             }
 
-            return new MessageTarget(productListQuery.getChannel().getId(), productListQuery.getChannel().getGuild().getId(), rolesToPing);
+            return new MessageTarget(productListQuery.getChannel().getId(), productListQuery.getChannel().getGuild(), rolesToPing);
         } else {
             return null;
         }

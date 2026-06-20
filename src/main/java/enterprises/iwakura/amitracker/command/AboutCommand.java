@@ -35,7 +35,7 @@ public class AboutCommand extends AmiTrackerCommand {
 
     @Override
     protected void executeAsync(SlashCommandEvent event) {
-        event.deferReply(true).queue();
+        event.deferReply(true).complete();
 
         List<MessageTopLevelComponent> components = List.of(
             Container.of(

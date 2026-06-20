@@ -1,10 +1,12 @@
 package enterprises.iwakura.amitracker.constant;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 import net.dv8tion.jda.api.interactions.commands.Command.Choice;
 
 @Getter
@@ -27,6 +29,7 @@ public enum Currency {
     public static final List<Choice> CHOICES = ALL.stream()
         .map(currency -> new Choice("%s (%s)".formatted(currency.getEnglishName(), currency.getLocalName()), currency.name()))
         .toList();
+    public static final SelectOption[] SELECT_OPTIONS = ALL.stream().map(Currency::toSelectOption).toArray(SelectOption[]::new);
     public static final String CHOICES_STRING = ALL.stream()
         .map(Currency::name)
         .reduce((a, b) -> a + ", " + b)
@@ -44,5 +47,9 @@ public enum Currency {
         } catch (IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    public SelectOption toSelectOption() {
+        return SelectOption.of("%s (%s)".formatted(this.getEnglishName(), this.getSymbol()), this.name());
     }
 }

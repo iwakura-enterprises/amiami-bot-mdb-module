@@ -7,8 +7,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.jetbrains.annotations.NotNull;
 
+import enterprises.iwakura.amitracker.constant.Currency;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
@@ -37,6 +40,9 @@ public class UserEntity {
     @NotNull
     @Column(nullable = false)
     private String name;
+
+    @Enumerated(value = EnumType.STRING)
+    private Currency preferredCurrency;
 
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     private List<WishlistEntity> wishlists;

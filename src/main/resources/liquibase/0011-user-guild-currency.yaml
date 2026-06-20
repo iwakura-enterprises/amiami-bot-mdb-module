@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0011-user-guild-currency-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: user
+            columns:
+              - column:
+                  name: preferredCurrency
+                  type: VARCHAR(255)
+  - changeSet:
+      id: 0011-user-guild-currency-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: guild
+            columns:
+              - column:
+                  name: preferredCurrency
+                  type: VARCHAR(255)
+                  defaultValue: JPY
+              - column:
+                  name: secondaryCurrencies
+                  type: JSONB
+                  defaultValue: '[]'

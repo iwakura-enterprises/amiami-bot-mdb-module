@@ -1,11 +1,15 @@
 package enterprises.iwakura.amitracker.listener;
 
+import java.util.Optional;
+
 import enterprises.iwakura.amitracker.command.ProductCommand;
 import enterprises.iwakura.amitracker.database.repository.ChannelRepository;
 import enterprises.iwakura.amitracker.database.repository.GuildRepository;
 import enterprises.iwakura.amitracker.database.repository.UserRepository;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
+import enterprises.iwakura.amitracker.service.GuildService;
 import enterprises.iwakura.amitracker.service.ProductService;
+import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +29,12 @@ public class DiscordListener extends ListenerAdapter {
     private final GuildRepository guildRepository;
     private final ChannelRepository channelRepository;
     private final UserRepository userRepository;
+
+    private final UserService userService;
+    private final GuildService guildService;
     private final ProductService productService;
     private final ConcurrencyService concurrencyService;
+
     private final ProductCommand productCommand;
 
     @Override
@@ -51,6 +59,7 @@ public class DiscordListener extends ListenerAdapter {
     public void onMessageReceived(MessageReceivedEvent event) {
         var message = event.getMessage();
         var channel = event.getChannel();
+        var guild = event.isFromGuild() ? event.getGuild() : null;
         var user = event.getMessage().getAuthor();
 
         if (!channel.canTalk() || user.isBot()) {
@@ -66,7 +75,10 @@ public class DiscordListener extends ListenerAdapter {
 
             concurrencyService.scheduleThrottled(channel.getId(), () -> {
                 productService.getOrQueryProduct(productCode).ifPresent(e -> {
-                    var messageBuilder = productCommand.createProductMessage(e).build();
+                    var userEntity = userService.getOrCreateUser(user);
+                    var guildEntity = Optional.ofNullable(guild).map(guildService::getOrCreateGuild).orElse(null);
+
+                    var messageBuilder = productCommand.createProductMessage(guildEntity, userEntity, e).build();
                     message.reply(MessageCreateData.fromEditData(messageBuilder)).queue();
                 });
             });
