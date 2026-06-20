@@ -28,12 +28,13 @@ public class ProductHistoryRepository extends AmiBaseRepository<ProductHistoryEn
         return productHistoryEntity.getId() != null;
     }
 
-    public ProductHistoryEntity addNewHistory(ProductEntity productEntity, long newPriceJpy, ProductState newProductState) {
+    public ProductHistoryEntity addNewHistory(ProductEntity productEntity, long newPriceJpy, ProductState newProductState, String responseJson) {
         return databaseService.runInThreadTransaction(session -> {
             var productHistory = new ProductHistoryEntity();
             productHistory.setPriceJpy(newPriceJpy);
             productHistory.setProductState(newProductState);
             productHistory.setProduct(productEntity);
+            productHistory.setResponseJson(responseJson);
             return save(productHistory);
         });
     }

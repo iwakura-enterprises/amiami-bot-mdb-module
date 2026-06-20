@@ -3,6 +3,8 @@ package enterprises.iwakura.amitracker.database.entity;
 import java.time.OffsetDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import enterprises.iwakura.amitracker.constant.ProductState;
 import jakarta.persistence.Column;
@@ -46,7 +48,8 @@ public class ProductHistoryEntity {
     @Enumerated(EnumType.STRING)
     private ProductState productState;
 
-    // TODO: Add json
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String responseJson; // Mixed ResultItem and Item detail
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "product_id")

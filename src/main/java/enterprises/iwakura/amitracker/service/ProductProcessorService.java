@@ -128,8 +128,7 @@ public class ProductProcessorService {
                                 productEntity,
                                 resultItem.getMinimumPriceJpy(),
                                 ProductState.parse(resultItem),
-                                resultItem.getThumbnailUrl(),
-                                searchResponses
+                                resultItem.getThumbnailUrl()
                             );
                         } else {
                             log.error(
@@ -154,7 +153,7 @@ public class ProductProcessorService {
                         // Update existing product entity & check for changes
                         productEntity.setResponseJson(gson.toJson(resultItem));
                         productRepository.save(productEntity);
-                        checkChangesAndUpdateAndAnnounce(productEntity, resultItem.getMinimumPriceJpy(), ProductState.parse(resultItem), resultItem.getThumbnailUrl(), searchResponses);
+                        checkChangesAndUpdateAndAnnounce(productEntity, resultItem.getMinimumPriceJpy(), ProductState.parse(resultItem), resultItem.getThumbnailUrl());
                     } else {
                         log.error("This should not happen! Result item not found from ProductEntity code {} when updating remaining products",
                             productEntity.getCode()
@@ -195,7 +194,7 @@ public class ProductProcessorService {
             existingProduct.setResponseJson(gson.toJson(item));
 
             // Update existing product entity & check for changes
-            checkChangesAndUpdateAndAnnounce(existingProduct, item.getPriceJpy(), ProductState.parse(item), item.getMainImageUrl(), null);
+            checkChangesAndUpdateAndAnnounce(existingProduct, item.getPriceJpy(), ProductState.parse(item), item.getMainImageUrl());
 
             existingProduct.setUpdatedAt(OffsetDateTime.now());
             productRepository.save(existingProduct);
@@ -220,8 +219,7 @@ public class ProductProcessorService {
         ProductEntity productEntity,
         long newPriceJpy,
         ProductState newProductState,
-        String newImageUrl,
-        List<AmiAmiSearchResponse> searchResponses
+        String newImageUrl
     ) {
         final var oldPriceJpy = productEntity.getPriceJpy();
         final var oldProductState = productEntity.getProductState();
@@ -230,7 +228,7 @@ public class ProductProcessorService {
         boolean priceChanged = !Objects.equals(oldPriceJpy, newPriceJpy);
         boolean priceHasDiscount = newPriceJpy < oldPriceJpy;
         boolean productStateChanged = !Objects.equals(oldProductState, newProductState);
-        boolean imageUrlChanged = !Objects.equals(oldImageUrl, newImageUrl);
+        boolean imageUrlChanged = !Objects.equals(oldImageUrl, newImageUrl) && !newImageUrl.equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL); // Guard against setting the image to no image
         List<ProductChangeType> productChangeTypes = new ArrayList<>();
 
         if (productStateChanged) {
@@ -241,16 +239,13 @@ public class ProductProcessorService {
         }
         if (imageUrlChanged) {
             productChangeTypes.add(ProductChangeType.IMAGE_URL_CHANGE);
-        }
-
-        if (imageUrlChanged) {
             productEntity.setImageUrl(newImageUrl);
         }
 
         // Save even if price is not of discount
         if (productStateChanged || priceChanged) {
             // Add history
-            productHistoryService.addNewHistory(productEntity, newPriceJpy, newProductState);
+            productHistoryService.addNewHistory(productEntity, newPriceJpy, newProductState, productEntity.getResponseJson());
 
             // Update values
             productEntity.setPriceJpy(newPriceJpy);
@@ -287,6 +282,8 @@ public class ProductProcessorService {
      */
     private ProductEntity createProductFromItem(Item item) {
         return databaseService.runInThreadTransaction(session -> {
+            var json = gson.toJson(item);
+
             var product = new ProductEntity();
             product.setCode(item.getGCode());
             product.setName(item.getName());
@@ -295,9 +292,9 @@ public class ProductProcessorService {
             product.setMakerName(item.getMakerName());
             product.setProductState(ProductState.parse(item));
             product.setReleaseDate(ReleaseDateParser.parse(item.getReleaseDate()));
-            product.setResponseJson(gson.toJson(item));
+            product.setResponseJson(json);
             var savedProduct = productRepository.save(product);
-            productHistoryService.initialize(savedProduct);
+            productHistoryService.initialize(savedProduct, json);
 
             if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
                 productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);
@@ -316,6 +313,8 @@ public class ProductProcessorService {
      */
     private ProductEntity createProductFromResultItem(ResultItem resultItem) {
         return databaseService.runInThreadTransaction(session -> {
+            var json = gson.toJson(resultItem);
+
             var product = new ProductEntity();
             product.setCode(resultItem.getGCode());
             product.setName(resultItem.getGName());
@@ -324,9 +323,9 @@ public class ProductProcessorService {
             product.setMakerName(resultItem.getMakerName());
             product.setProductState(ProductState.parse(resultItem));
             product.setReleaseDate(ReleaseDateParser.parseNormal(resultItem.getReleaseDate()));
-            product.setResponseJson(gson.toJson(resultItem));
+            product.setResponseJson(json);
             var savedProduct = productRepository.save(product);
-            productHistoryService.initialize(savedProduct);
+            productHistoryService.initialize(savedProduct, json);
 
             if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
                 productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);

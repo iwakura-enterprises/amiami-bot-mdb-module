@@ -19,17 +19,18 @@ public class ProductHistoryService {
      * Initializes a ProductHistoryEntity based on the given ProductEntity.
      *
      * @param productEntity the ProductEntity to base the history on
+     * @param responseJson  JSON from which the ProductEntity was created
      *
      * @return the initialized ProductHistoryEntity
      *
      * @throws IllegalStateException if the product does not have state or price initialized
      */
-    public ProductHistoryEntity initialize(ProductEntity productEntity) {
+    public ProductHistoryEntity initialize(ProductEntity productEntity, String responseJson) {
         if (productEntity.getProductState() == null || productEntity.getPriceJpy() == null) {
             throw new IllegalStateException("Product must have state and price initialized before creating history.");
         }
         return productHistoryRepository.addNewHistory(
-            productEntity, productEntity.getPriceJpy(), productEntity.getProductState()
+            productEntity, productEntity.getPriceJpy(), productEntity.getProductState(), responseJson
         );
     }
 
@@ -39,14 +40,16 @@ public class ProductHistoryService {
      * @param productEntity   Product entity
      * @param newPriceJpy     New price in JPY
      * @param newProductState New product state
+     * @param responseJson    JSON from which the ProductEntity was created
      *
      * @return Created product history entity
      */
     public ProductHistoryEntity addNewHistory(
         ProductEntity productEntity,
         long newPriceJpy,
-        ProductState newProductState
+        ProductState newProductState,
+        String responseJson
     ) {
-        return productHistoryRepository.addNewHistory(productEntity, newPriceJpy, newProductState);
+        return productHistoryRepository.addNewHistory(productEntity, newPriceJpy, newProductState, responseJson);
     }
 }

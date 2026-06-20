@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0010-product-history-response-json
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: product_history
+            columns:
+              - column:
+                  name: responseJson
+                  type: JSONB
