@@ -1,6 +1,7 @@
 package enterprises.iwakura.amitracker.command.notify;
 
 import java.util.List;
+import java.util.Objects;
 
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
@@ -93,7 +94,7 @@ public class ProductNotifyCreateCommand extends ProductNotifySubCommand {
 
         var existingProductLists = productListService.getChannelProductListsByChannelId(channel.getIdLong());
         var existsSameProductQuery = existingProductLists.stream()
-            .filter(channelEntity -> channelEntity.getProductListQuery().getProductSearchParameters().equals(productSearchParameters))
+            .filter(channelEntity -> Objects.equals(productSearchParameters, channelEntity.getProductListQuery().getProductSearchParameters()))
             .map(ChannelProductListQueryEntity::getName)
             .findAny();
 

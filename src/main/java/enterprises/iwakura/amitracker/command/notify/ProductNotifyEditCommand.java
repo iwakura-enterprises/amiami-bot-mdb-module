@@ -122,7 +122,7 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
             if (optionalEntity.isPresent()) {
                 var entity = optionalEntity.get();
                 showSettingsMenu(
-                    user, channel, hook, entity, entity.getProductListQuery().getProductSearchParameters(), false
+                    user, channel, hook, entity, Optional.ofNullable(entity.getProductListQuery().getProductSearchParameters()).orElse(ProductSearchParameters.EMPTY), false
                 );
             } else {
                 hook.editOriginal("Could not find search notification with ID %d".formatted(channelProductListQueryId)).queue();
@@ -334,7 +334,8 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
         components.add(TextDisplay.of("**Search Parameters**"));
         components.add(TextDisplay.of("```\n%s\n```".formatted(
             Optional.ofNullable(productSearchParameters)
-                .orElseGet(() -> entity.getProductListQuery().getProductSearchParameters())
+                .or(() -> Optional.ofNullable(entity.getProductListQuery().getProductSearchParameters()))
+                .orElse(ProductSearchParameters.EMPTY)
                 .toDiscordMessage()
         )));
 

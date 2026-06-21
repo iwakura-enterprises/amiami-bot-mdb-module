@@ -18,6 +18,7 @@ import enterprises.iwakura.amitracker.database.entity.UserEntity;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
 import enterprises.iwakura.amitracker.exception.QueryFailedException;
 import enterprises.iwakura.amitracker.object.ProductChoice;
+import enterprises.iwakura.amitracker.object.ProductSearchParameters;
 import enterprises.iwakura.amitracker.objects.query.ProductQueryRequest;
 import enterprises.iwakura.amitracker.util.URLHelper;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
@@ -164,7 +165,7 @@ public class ProductService {
         sb.append("`%s`\n".formatted(product.getCode()));
 
         if (productListQueryEntity != null) {
-            sb.append("└  [Search link](%s)".formatted(productListQueryEntity.getProductSearchParameters().toUrl()));
+            sb.append("└  [Search link](%s)".formatted(Optional.ofNullable(productListQueryEntity.getProductSearchParameters()).orElse(ProductSearchParameters.EMPTY).toUrl()));
         }
 
         return sb.toString();
