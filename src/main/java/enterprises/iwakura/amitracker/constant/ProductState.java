@@ -1,11 +1,14 @@
 package enterprises.iwakura.amitracker.constant;
 
 import java.awt.Color;
+import java.util.Arrays;
+import java.util.List;
 
 import enterprises.iwakura.kirara.amiami.response.AmiAmiItemResponse;
 import enterprises.iwakura.kirara.amiami.response.AmiAmiSearchResponse.ResultItem;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import net.dv8tion.jda.api.components.selections.SelectOption;
 
 @Getter
 @RequiredArgsConstructor
@@ -21,6 +24,11 @@ public enum ProductState {
 
     private final boolean inStock;
     private final Color color;
+
+    public static final List<ProductState> ALL = Arrays.asList(ProductState.values());
+    public static final List<SelectOption> SELECT_OPTIONS = ALL.stream()
+        .map(it -> SelectOption.of(it.toString(), it.name()))
+        .toList();
 
     /**
      * Parses the product state from the given AmiAmi item.

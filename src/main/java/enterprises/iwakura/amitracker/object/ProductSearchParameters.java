@@ -13,11 +13,6 @@ public class ProductSearchParameters {
     public static final ProductSearchParameters EMPTY = new ProductSearchParameters();
 
     private String searchKeywords;
-    private Boolean filterAnyAvailability;
-    private Boolean filterPreOrder;
-    private Boolean filterBackOrder;
-    private Boolean filterNewItems;
-    private Boolean filterPreOwnedItems;
     private Boolean filterAmiAmiBonus;
     private Boolean filterOnSaleItems;
     private Integer category1Id;
@@ -53,10 +48,6 @@ public class ProductSearchParameters {
             var value = URLDecoder.decode(kv[1], StandardCharsets.UTF_8);
             switch (key) {
                 case "s_keywords" -> params.setSearchKeywords(value);
-                case "s_st_list_preorder_available" -> params.setFilterPreOrder("1".equals(value));
-                case "s_st_list_backorder_available" -> params.setFilterBackOrder("1".equals(value));
-                case "s_st_list_newitem_available" -> params.setFilterNewItems("1".equals(value));
-                case "s_st_condition_flg" -> params.setFilterPreOwnedItems("1".equals(value));
                 case "s_st_list_store_bonus" -> params.setFilterAmiAmiBonus("1".equals(value));
                 case "s_st_saleitem" -> params.setFilterOnSaleItems("1".equals(value));
                 case "s_cate1" -> params.setCategory1Id(Integer.parseInt(value));
@@ -82,16 +73,6 @@ public class ProductSearchParameters {
         var sb = new StringBuilder();
         if (searchKeywords != null && !searchKeywords.isBlank())
             sb.append("Keywords: ").append(searchKeywords).append("\n");
-        if (filterAnyAvailability != null)
-            sb.append("Any Availability: ").append(filterAnyAvailability).append("\n");
-        if (filterPreOrder != null)
-            sb.append("Pre-Order: ").append(filterPreOrder).append("\n");
-        if (filterBackOrder != null)
-            sb.append("Back-Order: ").append(filterBackOrder).append("\n");
-        if (filterNewItems != null)
-            sb.append("New Items: ").append(filterNewItems).append("\n");
-        if (filterPreOwnedItems != null)
-            sb.append("Pre-Owned Items: ").append(filterPreOwnedItems).append("\n");
         if (filterAmiAmiBonus != null)
             sb.append("AmiAmi Bonus: ").append(filterAmiAmiBonus).append("\n");
         if (filterOnSaleItems != null)
@@ -126,16 +107,6 @@ public class ProductSearchParameters {
         var sb = new StringBuilder("%s/eng/search/list/?".formatted(AmiAmiApiService.AMIAMI_URL));
         if (searchKeywords != null && !searchKeywords.isBlank())
             sb.append("s_keywords=").append(URLEncoder.encode(searchKeywords, StandardCharsets.UTF_8)).append("&");
-        if (filterAnyAvailability != null && filterAnyAvailability)
-            sb.append("s_st_list_any_available=1&");
-        if (filterPreOrder != null && filterPreOrder)
-            sb.append("s_st_list_preorder_available=1&");
-        if (filterBackOrder != null && filterBackOrder)
-            sb.append("s_st_list_backorder_available=1&");
-        if (filterNewItems != null && filterNewItems)
-            sb.append("s_st_list_newitem_available=1&");
-        if (filterPreOwnedItems != null && filterPreOwnedItems)
-            sb.append("s_st_condition_flg=1&");
         if (filterAmiAmiBonus != null && filterAmiAmiBonus)
             sb.append("s_st_list_store_bonus=1&");
         if (filterOnSaleItems != null && filterOnSaleItems)
@@ -168,11 +139,6 @@ public class ProductSearchParameters {
 
     public boolean isEmpty() {
         return (searchKeywords == null || searchKeywords.isBlank())
-            && filterAnyAvailability == null
-            && filterPreOrder == null
-            && filterBackOrder == null
-            && filterNewItems == null
-            && filterPreOwnedItems == null
             && filterAmiAmiBonus == null
             && filterOnSaleItems == null
             && category1Id == null

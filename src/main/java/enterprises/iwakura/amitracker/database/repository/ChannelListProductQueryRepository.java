@@ -4,9 +4,11 @@ import java.util.List;
 import java.util.Optional;
 
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
+import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
+import enterprises.iwakura.amitracker.object.ProductChangeHolder;
 import enterprises.iwakura.amitracker.service.DatabaseService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 
@@ -46,7 +48,8 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
     public List<ChannelProductListQueryEntity> findEntriesToNotify(
         ProductEntity productEntity,
         ProductListQueryEntity productListQueryEntity,
-        List<ProductChangeType> productChangeTypes
+        List<ProductChangeType> productChangeTypes,
+        ProductChangeHolder productChangeHolder
     ) {
         return databaseService.runInThreadTransaction(session -> {
             boolean checkPriceDiscount = productChangeTypes.contains(ProductChangeType.PRICE_DISCOUNT);
@@ -58,31 +61,46 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
                 return List.of();
             }
 
-            var hql = """
-                      SELECT DISTINCT c
-                      FROM ChannelProductListQueryEntity c
-                      JOIN c.productListQuery pq
-                      JOIN pq.entries e
-                      WHERE e.product = :product AND (:productListQueryEntity is null or c.productListQuery = :productListQueryEntity)
-                      AND (
-                          (:checkPriceDiscount = true AND c.priceDiscountEnabled = true)
-                          OR
-                          (:checkStockChange = true AND c.stockChangeEnabled = true)
-                          OR
-                          (:checkNewProducts = true AND c.newProductsEnabled = true)
-                          OR
-                          (:imageUrlChanged = true AND EXISTS (
-                              SELECT 1 FROM ProductChangeAnnouncementEntity a
-                              WHERE a.channelProductListQuery = c AND a.productEntity = :product
-                          ))
-                      )
-                      """;
+            var sql = """
+                SELECT DISTINCT c.*
+                FROM channel_product_list_query c
+                JOIN product_query pq ON pq.id = c.productlistquery_id
+                JOIN product_list_query_result_entry e ON e.productlistquery_id = pq.id
+                WHERE e.product_id = :productId
+                  AND (CAST(:productListQueryId AS BIGINT) IS NULL OR c.productlistquery_id = CAST(:productListQueryId AS BIGINT))
+                  AND (
+                      (:checkPriceDiscount = true AND c.pricediscountenabled = true)
+                      OR
+                      (:checkStockChange = true AND (
+                          (CAST(:newProductState AS TEXT) IS NOT NULL AND jsonb_exists(c.statetoenabled, CAST(:newProductState AS TEXT))) OR
+                          (CAST(:oldProductState AS TEXT) IS NOT NULL AND jsonb_exists(c.statefromenabled, CAST(:oldProductState AS TEXT)))
+                      ))
+                      OR
+                      (:checkNewProducts = true AND c.newproductsenabled = true)
+                      OR
+                      (:imageUrlChanged = true AND EXISTS (
+                          SELECT 1 FROM product_change_announcement a
+                          WHERE a.channelproductlistqueryentity_id = c.id AND a.product_id = :productId
+                      ))
+                  )
+                """;
 
-            return session.createQuery(hql, ChannelProductListQueryEntity.class)
-                .setParameter("product", productEntity)
-                .setParameter("productListQueryEntity", productListQueryEntity)
+            var newState = Optional.ofNullable(productChangeHolder)
+                .map(ProductChangeHolder::getNewProductState)
+                .map(Enum::name)
+                .orElse(null);
+            var oldState = Optional.ofNullable(productChangeHolder)
+                .map(ProductChangeHolder::getOldProductState)
+                .map(Enum::name)
+                .orElse(null);
+
+            return session.createNativeQuery(sql, ChannelProductListQueryEntity.class)
+                .setParameter("productId", productEntity.getId())
+                .setParameter("productListQueryId", productListQueryEntity != null ? productListQueryEntity.getId() : null)
                 .setParameter("checkPriceDiscount", checkPriceDiscount)
                 .setParameter("checkStockChange", checkStockChange)
+                .setParameter("newProductState", newState)
+                .setParameter("oldProductState", oldState)
                 .setParameter("checkNewProducts", checkNewProducts)
                 .setParameter("imageUrlChanged", imageUrlChanged)
                 .getResultList();

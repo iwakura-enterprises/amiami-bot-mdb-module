@@ -93,8 +93,12 @@ public class ProductChangeAnnounceService {
         ProductChangeHolder productChangeHolder
     ) {
         var wishlists = wishlistRepository.findWishlistsToNotify(productEntity, productChangeTypes);
-        var channelProductListQueryEntries = channelListProductQueryRepository.findEntriesToNotify(productEntity, null,
-            productChangeTypes);
+        var channelProductListQueryEntries = channelListProductQueryRepository.findEntriesToNotify(
+            productEntity,
+            null,
+            productChangeTypes,
+            productChangeHolder
+        );
         List<ProductChangeAnnouncementEntity> announcements = new ArrayList<>();
 
         log.debug("Found {} wishlists and {} channel product list queries to announce product code {} with changes {}",
@@ -134,8 +138,12 @@ public class ProductChangeAnnounceService {
      * @param productEntity          Product entity
      */
     public void scheduleProductAddedInList(ProductListQueryEntity productListQueryEntity, ProductEntity productEntity) {
-        var channelProductListQueryEntries = channelListProductQueryRepository.findEntriesToNotify(productEntity,
-            productListQueryEntity, PRODUCT_ADDED_LIST);
+        var channelProductListQueryEntries = channelListProductQueryRepository.findEntriesToNotify(
+            productEntity,
+            productListQueryEntity,
+            PRODUCT_ADDED_LIST,
+            null
+        );
 
         var announcements = channelProductListQueryEntries.stream()
             .map(channelProductListQueryEntity -> productChangeAnnouncementRepository.save(

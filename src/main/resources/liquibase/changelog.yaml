@@ -32,3 +32,9 @@ databaseChangeLog:
   - include:
       file: 0011-user-guild-currency.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0012-channel-product-list-query-state-filters.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 0013-drop-product-query-availability-filters.yaml
+      relativeToChangelogFile: true

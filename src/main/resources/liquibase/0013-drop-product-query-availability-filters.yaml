@@ -1,0 +1,21 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0013-drop-product-query-availability-filters-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropColumn:
+            tableName: product_query
+            columnName: filterAnyAvailability
+        - dropColumn:
+            tableName: product_query
+            columnName: filterPreOrder
+        - dropColumn:
+            tableName: product_query
+            columnName: filterBackOrder
+        - dropColumn:
+            tableName: product_query
+            columnName: filterNewItems
+        - dropColumn:
+            tableName: product_query
+            columnName: filterPreOwnedItems

@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0012-channel-product-list-query-state-filters-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: channel_product_list_query
+            columns:
+              - column:
+                  name: stateToEnabled
+                  type: JSONB
+                  defaultValue: '[]'
+              - column:
+                  name: stateFromEnabled
+                  type: JSONB
+                  defaultValue: '[]'
+  - changeSet:
+      id: 0012-channel-product-list-query-state-filters-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - sql:
+            sql: >-
+              UPDATE channel_product_list_query
+              SET
+                "statetoenabled" = '["PRE_ORDER_AVAILABLE","PRE_ORDER_CLOSED","BACK_ORDER_AVAILABLE","BACK_ORDER_CLOSED","PRE_OWNED","IN_STOCK","ORDER_CLOSED"]',
+                "statefromenabled" = '["PRE_ORDER_AVAILABLE","PRE_ORDER_CLOSED","BACK_ORDER_AVAILABLE","BACK_ORDER_CLOSED","PRE_OWNED","IN_STOCK","ORDER_CLOSED"]'
+              WHERE "stockchangeenabled" = true
+  - changeSet:
+      id: 0012-channel-product-list-query-state-filters-3
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropColumn:
+            tableName: channel_product_list_query
+            columnName: stockchangeenabled

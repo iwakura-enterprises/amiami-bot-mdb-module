@@ -1,13 +1,17 @@
 package enterprises.iwakura.amitracker.database.entity;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
+import enterprises.iwakura.amitracker.constant.ProductState;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -45,8 +49,11 @@ public class ChannelProductListQueryEntity {
     @Column(nullable = false)
     private boolean priceDiscountEnabled = true;
 
-    @Column(nullable = false)
-    private boolean stockChangeEnabled = true;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<ProductState> stateToEnabled = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<ProductState> stateFromEnabled = new ArrayList<>();
 
     @Column(nullable = false)
     private boolean newProductsEnabled = true;

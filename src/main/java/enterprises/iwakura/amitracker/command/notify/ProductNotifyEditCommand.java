@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
+import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
 import enterprises.iwakura.amitracker.object.ProductSearchParameters;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
@@ -262,17 +263,46 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
             return Result.REMOVE;
         });
 
-        var stockChangeButton = interactableMessage.addInteraction(Interaction.asButton(createToggleButton(entity.isStockChangeEnabled())), event -> {
-            var stockChangeButtonHook = event.deferEdit().complete();
+        var stateToSelectMenuBuilder = StringSelectMenu.create("abc")
+            .setPlaceholder("States...")
+            .addOptions(ProductState.SELECT_OPTIONS)
+            .setMinValues(0)
+            .setMaxValues(ProductState.SELECT_OPTIONS.size())
+            .setDefaultValues(entity.getStateToEnabled().stream().map(Enum::name).toList());
+        var stateToSelectMenu = interactableMessage.addInteraction(Interaction.asStringSelectMenu(stateToSelectMenuBuilder), e -> {
+            var selectMenuHook = e.deferEdit().complete();
+            var states = e.getValues().stream().map(ProductState::valueOf).toList();
 
-            boolean newState = !entity.isStockChangeEnabled();
-            entity.setStockChangeEnabled(newState);
+            entity.getStateToEnabled().clear();
+            entity.getStateToEnabled().addAll(states);
 
             if (!create) {
                 productListService.save(entity);
             }
 
-            showSettingsMenu(user, channel, stockChangeButtonHook, entity, productSearchParameters, create);
+            showSettingsMenu(user, channel, selectMenuHook, entity, productSearchParameters, create);
+
+            return Result.REMOVE;
+        });
+
+        var stateFromSelectMenuBuilder = StringSelectMenu.create("abc")
+            .setPlaceholder("States...")
+            .addOptions(ProductState.SELECT_OPTIONS)
+            .setMinValues(0)
+            .setMaxValues(ProductState.SELECT_OPTIONS.size())
+            .setDefaultValues(entity.getStateFromEnabled().stream().map(Enum::name).toList());
+        var stateFromSelectMenu = interactableMessage.addInteraction(Interaction.asStringSelectMenu(stateFromSelectMenuBuilder), e -> {
+            var selectMenuHook = e.deferEdit().complete();
+            var states = e.getValues().stream().map(ProductState::valueOf).toList();
+
+            entity.getStateFromEnabled().clear();
+            entity.getStateFromEnabled().addAll(states);
+
+            if (!create) {
+                productListService.save(entity);
+            }
+
+            showSettingsMenu(user, channel, selectMenuHook, entity, productSearchParameters, create);
 
             return Result.REMOVE;
         });
@@ -316,16 +346,28 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
             )
         );
 
-        components.add(
-            Section.of(
-                stockChangeButton,
-                TextDisplay.of("**Stock Change Alerts**"),
-                TextDisplay.of("Enables or disables stock change alerts for this search notification.\nWhen enabled, this channel will receive notifications **when products in this search result change their stock status**.")
-            )
-        );
+        components.add(TextDisplay.of("**Stock state change into**"));
+        components.add(TextDisplay.of(
+            """
+            Notify when a product's stock state changes **to** one of the selected states.
+            For example, selecting **In stock** will trigger notifications when a product becomes in stock.
+            You may select multiple states. If you want to receive pre-order notifications, select **Pre-order available** state as well.
+            """
+        ));
+        components.add(ActionRow.of(stateToSelectMenu));
+
+        components.add(TextDisplay.of("**Stock state change from**"));
+        components.add(TextDisplay.of(
+            """
+            Notify when a product's stock state changes **from** one of the selected states.
+            For example, selecting **In stock** will trigger notifications when a product was in stock and it's not anymore.
+            You may select multiple states or none.
+            """
+        ));
+        components.add(ActionRow.of(stateFromSelectMenu));
 
         components.add(TextDisplay.of("**Roles to ping**"));
-        components.add(TextDisplay.of("Whenever a notification will be sent into this channel, the selected roles will be pinged.\nRole pings will be suppressed for notifications in a short span of time to prevent ping spamming."));
+        components.add(TextDisplay.of("Pings the specified roles when a notification is triggered.\nRole pings will be suppressed for notifications in a short span of time to prevent ping spamming."));
         components.add(ActionRow.of(roleSelectMenu));
 
         // Buttons

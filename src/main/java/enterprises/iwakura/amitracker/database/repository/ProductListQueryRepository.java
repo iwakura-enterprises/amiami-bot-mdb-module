@@ -129,11 +129,6 @@ public class ProductListQueryRepository extends AmiBaseRepository<ProductListQue
             var sql = """
             SELECT id FROM product_query
             WHERE (searchKeywords = :searchKeywords OR (searchKeywords IS NULL AND CAST(:searchKeywords AS VARCHAR) IS NULL))
-              AND (filterAnyAvailability = :filterAnyAvailability OR (filterAnyAvailability IS NULL AND CAST(:filterAnyAvailability AS BOOLEAN) IS NULL))
-              AND (filterPreOrder = :filterPreOrder OR (filterPreOrder IS NULL AND CAST(:filterPreOrder AS BOOLEAN) IS NULL))
-              AND (filterBackOrder = :filterBackOrder OR (filterBackOrder IS NULL AND CAST(:filterBackOrder AS BOOLEAN) IS NULL))
-              AND (filterNewItems = :filterNewItems OR (filterNewItems IS NULL AND CAST(:filterNewItems AS BOOLEAN) IS NULL))
-              AND (filterPreOwnedItems = :filterPreOwnedItems OR (filterPreOwnedItems IS NULL AND CAST(:filterPreOwnedItems AS BOOLEAN) IS NULL))
               AND (filterAmiAmiBonus = :filterAmiAmiBonus OR (filterAmiAmiBonus IS NULL AND CAST(:filterAmiAmiBonus AS BOOLEAN) IS NULL))
               AND (filterOnSaleItems = :filterOnSaleItems OR (filterOnSaleItems IS NULL AND CAST(:filterOnSaleItems AS BOOLEAN) IS NULL))
               AND (category1Id = :category1Id OR (category1Id IS NULL AND CAST(:category1Id AS INT) IS NULL))
@@ -150,11 +145,6 @@ public class ProductListQueryRepository extends AmiBaseRepository<ProductListQue
 
             var resultId = session.createNativeQuery(sql, Long.class)
                 .setParameter("searchKeywords", productSearchParameters.getSearchKeywords())
-                .setParameter("filterAnyAvailability", productSearchParameters.getFilterAnyAvailability())
-                .setParameter("filterPreOrder", productSearchParameters.getFilterPreOrder())
-                .setParameter("filterBackOrder", productSearchParameters.getFilterBackOrder())
-                .setParameter("filterNewItems", productSearchParameters.getFilterNewItems())
-                .setParameter("filterPreOwnedItems", productSearchParameters.getFilterPreOwnedItems())
                 .setParameter("filterAmiAmiBonus", productSearchParameters.getFilterAmiAmiBonus())
                 .setParameter("filterOnSaleItems", productSearchParameters.getFilterOnSaleItems())
                 .setParameter("category1Id", productSearchParameters.getCategory1Id())
