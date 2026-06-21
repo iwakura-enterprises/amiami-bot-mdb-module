@@ -83,22 +83,31 @@ public class ProductListQueryEntity {
     private List<ChannelProductListQueryEntity> channelsWithQuery;
 
     public AmiAmiSearchRequest toAmiAmiSearchRequest(int page) {
-        return AmiAmiSearchRequest.builder()
-            .maximumItemsPerPage(AmiAmiApiService.MAX_ITEMS_PER_QUERY)
-            .pageNumber(page)
-            .sortKey(SortKeys.RECENTLY_UPDATED)
-            .searchKeywords(productSearchParameters.getSearchKeywords())
-            .filterAmiAmiBonus(productSearchParameters.getFilterAmiAmiBonus())
-            .filterOnSaleItems(productSearchParameters.getFilterOnSaleItems())
-            .category1Id(productSearchParameters.getCategory1Id())
-            .category2Id(productSearchParameters.getCategory2Id())
-            .category3Id(productSearchParameters.getCategory3Id())
-            .category4Id(productSearchParameters.getCategory4Id())
-            .categoryTagId(productSearchParameters.getCategoryTagId())
-            .characterNameId(productSearchParameters.getCharacterNameId())
-            .makerId(productSearchParameters.getMakerId())
-            .originalTitleId(productSearchParameters.getOriginalTitleId())
-            .seriesTitleId(productSearchParameters.getSeriesTitleId())
-            .build();
+        if (productSearchParameters == null) {
+            return AmiAmiSearchRequest.builder()
+                .maximumItemsPerPage(AmiAmiApiService.MAX_ITEMS_PER_QUERY)
+                .pageNumber(page)
+                .sortKey(SortKeys.RECENTLY_UPDATED)
+                .searchKeywords("") // Empty search keyword
+                .build();
+        } else {
+            return AmiAmiSearchRequest.builder()
+                .maximumItemsPerPage(AmiAmiApiService.MAX_ITEMS_PER_QUERY)
+                .pageNumber(page)
+                .sortKey(SortKeys.RECENTLY_UPDATED)
+                .searchKeywords(productSearchParameters.getSearchKeywords())
+                .filterAmiAmiBonus(productSearchParameters.getFilterAmiAmiBonus())
+                .filterOnSaleItems(productSearchParameters.getFilterOnSaleItems())
+                .category1Id(productSearchParameters.getCategory1Id())
+                .category2Id(productSearchParameters.getCategory2Id())
+                .category3Id(productSearchParameters.getCategory3Id())
+                .category4Id(productSearchParameters.getCategory4Id())
+                .categoryTagId(productSearchParameters.getCategoryTagId())
+                .characterNameId(productSearchParameters.getCharacterNameId())
+                .makerId(productSearchParameters.getMakerId())
+                .originalTitleId(productSearchParameters.getOriginalTitleId())
+                .seriesTitleId(productSearchParameters.getSeriesTitleId())
+                .build();
+        }
     }
 }
