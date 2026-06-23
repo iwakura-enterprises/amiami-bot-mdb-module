@@ -1,6 +1,6 @@
 {
   "name": "Ami Tracker",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "author": "Mayuna",
   "mainClass": "enterprises.iwakura.amitracker.AmiTracker",
   "configClass": "enterprises.iwakura.amitracker.AmiTrackerConfig",
