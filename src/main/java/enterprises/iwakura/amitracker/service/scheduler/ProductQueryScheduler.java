@@ -143,10 +143,7 @@ public class ProductQueryScheduler extends BaseScheduler {
                                     } else {
                                         retryNumber = retryNumber + 1;
                                         var nextSchedule = OffsetDateTime.now().plus(
-                                            (long) Math.pow(
-                                                productQueryConfig.getNoImageRefreshBackOffBase(),
-                                                retryNumber
-                                            ),
+                                            productQueryConfig.getNoImageRefreshBackOffBase() * retryNumber,
                                             ChronoUnit.MILLIS
                                         );
                                         log.info("Image for product {} not found, retry no. {}/{}, next try @ {} in product image refresh enttiy {}",

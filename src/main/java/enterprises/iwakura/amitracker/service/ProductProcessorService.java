@@ -297,7 +297,7 @@ public class ProductProcessorService {
             productHistoryService.initialize(savedProduct, json);
 
             if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
-                productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);
+                //productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);
             }
 
             return savedProduct;
@@ -328,7 +328,7 @@ public class ProductProcessorService {
             productHistoryService.initialize(savedProduct, json);
 
             if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
-                productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);
+                //productImageRefreshRepository.createPending(product, ImageRefreshReason.NO_IMAGE);
             }
 
             return savedProduct;
