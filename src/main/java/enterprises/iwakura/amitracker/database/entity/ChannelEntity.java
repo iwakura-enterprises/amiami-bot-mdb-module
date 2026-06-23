@@ -19,7 +19,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -42,10 +44,14 @@ public class ChannelEntity {
     @Column(nullable = false)
     private String name;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne(optional = false)
     @JoinColumn(name = "guild_id")
     private GuildEntity guild;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "channel")
     private List<ChannelProductListQueryEntity> productListQueries;
 }

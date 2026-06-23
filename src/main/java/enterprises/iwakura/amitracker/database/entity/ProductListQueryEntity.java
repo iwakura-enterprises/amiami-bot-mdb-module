@@ -24,7 +24,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -73,12 +75,18 @@ public class ProductListQueryEntity {
 
     private OffsetDateTime lastQueryAt;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @JdbcTypeCode(SqlTypes.JSON)
     private String responseJson;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "productListQuery", fetch = FetchType.LAZY)
     private List<ProductListQueryResultEntryEntity> entries;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "productListQuery", fetch = FetchType.LAZY)
     private List<ChannelProductListQueryEntity> channelsWithQuery;
 

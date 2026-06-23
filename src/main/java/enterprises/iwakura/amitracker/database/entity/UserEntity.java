@@ -18,7 +18,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -44,9 +46,13 @@ public class UserEntity {
     @Enumerated(value = EnumType.STRING)
     private Currency preferredCurrency;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     private List<WishlistEntity> wishlists;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "user")
     private List<BoughtProductEntity> boughtProducts;
 

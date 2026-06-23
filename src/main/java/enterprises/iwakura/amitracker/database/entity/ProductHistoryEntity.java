@@ -19,7 +19,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -48,9 +50,13 @@ public class ProductHistoryEntity {
     @Enumerated(EnumType.STRING)
     private ProductState productState;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @JdbcTypeCode(SqlTypes.JSON)
     private String responseJson; // Mixed ResultItem and Item detail
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne(optional = false)
     @JoinColumn(name = "product_id")
     private ProductEntity product;

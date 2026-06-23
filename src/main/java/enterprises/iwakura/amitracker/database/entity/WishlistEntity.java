@@ -21,7 +21,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -49,13 +51,19 @@ public class WishlistEntity {
     @Column(nullable = false)
     private boolean stockChangeEnabled = true;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne(optional = false)
     @JoinColumn(name = "user_id")
     private UserEntity user;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "wishlist")
     private List<WishlistEntryEntity> entries = new ArrayList<>();
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "wishlist", fetch = FetchType.LAZY)
     private List<ProductChangeAnnouncementEntity> productChangeAnnouncements;
 

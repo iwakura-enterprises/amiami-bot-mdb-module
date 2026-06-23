@@ -24,7 +24,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -61,14 +63,20 @@ public class ChannelProductListQueryEntity {
     @Column(nullable = false, columnDefinition = "bigint[]")
     private Set<Long> roleIdsToNotify = new HashSet<>();
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne(optional = false)
     @JoinColumn(name = "channel_id")
     private ChannelEntity channel;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne(optional = false)
     @JoinColumn(name = "productListQuery_id")
     private ProductListQueryEntity productListQuery;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(mappedBy = "channelProductListQuery", fetch = FetchType.LAZY)
     private List<ProductChangeAnnouncementEntity> productChangeAnnouncements;
 }

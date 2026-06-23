@@ -13,7 +13,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -29,12 +31,15 @@ public class WishlistEntryEntity {
     @CreationTimestamp
     private OffsetDateTime createdAt;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne(optional = false)
     @JoinColumn(name = "wishlist_id")
     private WishlistEntity wishlist;
 
-
     // NOTE: No lastQueriedAt -> check product.lastUpdatedAt instead
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne(optional = false)
     @JoinColumn(name = "product_id")
     private ProductEntity product;

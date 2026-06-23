@@ -26,7 +26,9 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -66,15 +68,21 @@ public class ProductEntity {
 
     private LocalDate releaseDate;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @JdbcTypeCode(SqlTypes.JSON)
     private String responseJson;
 
     /**
      * History for the product.
      */
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "product")
     private List<ProductHistoryEntity> history = new ArrayList<>();
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToOne(mappedBy = "product")
     private ProductImageRefreshEntity productImageRefresh;
 }

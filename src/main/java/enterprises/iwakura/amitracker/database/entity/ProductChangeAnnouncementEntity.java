@@ -22,7 +22,9 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -48,18 +50,26 @@ public class ProductChangeAnnouncementEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private List<ProductChangeType> productChangeTypes;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "product_id")
     private ProductEntity productEntity;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "wishlist_id")
     private WishlistEntity wishlist;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @ManyToOne
     @JoinColumn(name = "channelProductListQueryEntity_id")
     private ChannelProductListQueryEntity channelProductListQuery;
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @JdbcTypeCode(SqlTypes.JSON)
     private ProductChangeHolder productChangeHolder;
 }

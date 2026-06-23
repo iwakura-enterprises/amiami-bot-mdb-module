@@ -23,7 +23,9 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @Entity
@@ -52,6 +54,8 @@ public class GuildEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private List<Currency> secondaryCurrencies = new ArrayList<>();
 
+    @EqualsAndHashCode.Exclude
+    @ToString.Exclude
     @OneToMany(fetch = FetchType.LAZY, mappedBy = "guild")
     private List<ChannelEntity> channels;
 }
