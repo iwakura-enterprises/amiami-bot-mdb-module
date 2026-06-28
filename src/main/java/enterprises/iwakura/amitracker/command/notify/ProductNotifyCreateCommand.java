@@ -57,12 +57,20 @@ public class ProductNotifyCreateCommand extends ProductNotifySubCommand {
     protected void executeAsync(SlashCommandEvent event) {
         var user = event.getUser();
         var guild = event.getGuild();
+        var member = event.getMember();
         var channel = event.getGuildChannel();
         var name = event.getOption(OPTION_NAME, OptionMapping::getAsString);;
         var searchUrl = event.getOption(OPTION_SEARCH_URL, OptionMapping::getAsString);
 
-        if (guild == null) {
+        if (guild == null || member == null) {
             event.reply("This is guild only command!").setEphemeral(true).queue();
+            return;
+        }
+
+        if (!member.hasPermission(Permission.MANAGE_CHANNEL)) {
+            event.reply("Only members with Manage Channels can create product search notifications.")
+                .setEphemeral(true)
+                .queue();
             return;
         }
 

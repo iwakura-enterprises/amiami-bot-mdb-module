@@ -31,7 +31,6 @@ import net.dv8tion.jda.api.components.selections.EntitySelectMenu.DefaultValue;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu.SelectTarget;
 import net.dv8tion.jda.api.components.selections.SelectMenu;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
-import net.dv8tion.jda.api.components.selections.StringSelectMenu.Builder;
 import net.dv8tion.jda.api.components.separator.Separator;
 import net.dv8tion.jda.api.components.separator.Separator.Spacing;
 import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
@@ -49,7 +48,7 @@ import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
 @Bean
 public class ProductNotifyEditCommand extends ProductNotifySubCommand {
 
-    public static final String OPTION_PRODUCT_SEARCH_NOTIFICATION_NAME = "search-notification-name";
+    public static final String OPTION_PRODUCT_SEARCH_NOTIFICATION_ID = "search-notification-name";
     public static final int MAX_PAGEABLE_OPTION_COUNT = OptionData.MAX_CHOICES - 2;
 
     private final UserService userService;
@@ -68,7 +67,7 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
         this.help = "Edit product search notification settings in current server";
 
         this.options = List.of(
-            new OptionData(OptionType.INTEGER, OPTION_PRODUCT_SEARCH_NOTIFICATION_NAME, "Exact search notification", false, true)
+            new OptionData(OptionType.INTEGER, OPTION_PRODUCT_SEARCH_NOTIFICATION_ID, "Exact search notification", false, true)
         );
 
         this.userPermissions = new Permission[]{
@@ -83,7 +82,7 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
         if (guild != null) {
             var focusedOption = event.getFocusedOption().getName();
             var focusedValue = event.getFocusedOption().getValue();
-            if (focusedOption.equals(OPTION_PRODUCT_SEARCH_NOTIFICATION_NAME)) {
+            if (focusedOption.equals(OPTION_PRODUCT_SEARCH_NOTIFICATION_ID)) {
                 event.replyChoices(productListService.suggestChannelProductListQueries(guild.getIdLong(), focusedValue)).queue();
             }
         }
@@ -93,11 +92,19 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
     protected void executeAsync(SlashCommandEvent event) {
         var user = event.getUser();
         var guild = event.getGuild();
+        var member = event.getMember();
         var channel = event.getGuildChannel();
-        var channelProductListQueryId = event.getOption(OPTION_PRODUCT_SEARCH_NOTIFICATION_NAME, OptionMapping::getAsLong);;
+        var channelProductListQueryId = event.getOption(OPTION_PRODUCT_SEARCH_NOTIFICATION_ID, OptionMapping::getAsLong);;
 
-        if (guild == null) {
+        if (guild == null || member == null) {
             event.reply("This is guild only command!").setEphemeral(true).queue();
+            return;
+        }
+
+        if (!member.hasPermission(Permission.MANAGE_CHANNEL)) {
+            event.reply("Only members with Manage Channels can create product search notifications.")
+                .setEphemeral(true)
+                .queue();
             return;
         }
 
@@ -107,14 +114,23 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
         guildService.getOrCreateGuild(guild);
 
         if (channelProductListQueryId == null) {
-            var entities = productListService.getChannelProductListsByGuildId(guild.getIdLong());
+            var entitiesInChannel = productListService.getChannelProductListsByChannelId(channel.getIdLong());
 
-            if (entities.isEmpty()) {
-                hook.editOriginal("There are no search notifications on this server!").queue();
-            } else {
-                showSelectionMenu(
-                    user, channel, hook, entities, 0
+            if (entitiesInChannel.size() == 1) {
+                var entity = entitiesInChannel.getFirst();
+                showSettingsMenu(
+                    user, channel, hook, entitiesInChannel.getFirst(), Optional.ofNullable(entity.getProductListQuery().getProductSearchParameters()).orElse(ProductSearchParameters.EMPTY), false
                 );
+            } else {
+                var entities = productListService.getChannelProductListsByGuildId(guild.getIdLong());
+
+                if (entities.isEmpty()) {
+                    hook.editOriginal("There are no search notifications on this server!").queue();
+                } else {
+                    showSelectionMenu(
+                        user, channel, hook, entities, 0
+                    );
+                }
             }
         } else {
             var optionalEntity = productListService.getChannelProductList(guild.getIdLong(), channelProductListQueryId);

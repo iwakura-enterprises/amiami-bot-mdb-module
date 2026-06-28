@@ -63,7 +63,8 @@ public class ProductProcessorService {
 
             var resultItemByCode = searchResponses.stream()
                 .flatMap(response -> response.getItems().stream())
-                .collect(Collectors.toMap(ResultItem::getGCode, Function.identity()));
+                // Map by gcode, just take first item if duplicate (rare, happens when two pages contain one item)
+                .collect(Collectors.toMap(ResultItem::getGCode, Function.identity(), (k1, k2) -> k1));
             var productCodes = resultItemByCode.values().stream()
                 .map(ResultItem::getGCode)
                 .toList();
@@ -225,8 +226,8 @@ public class ProductProcessorService {
         final var oldProductState = productEntity.getProductState();
         final var oldImageUrl = productEntity.getImageUrl();
 
-        boolean priceChanged = !Objects.equals(oldPriceJpy, newPriceJpy);
-        boolean priceHasDiscount = newPriceJpy < oldPriceJpy;
+        boolean priceChanged = !Objects.equals(oldPriceJpy, newPriceJpy) && newPriceJpy > 0; // ignore new price being 0
+        boolean priceHasDiscount = priceChanged && newPriceJpy < oldPriceJpy;
         boolean productStateChanged = !Objects.equals(oldProductState, newProductState);
         boolean imageUrlChanged = !Objects.equals(oldImageUrl, newImageUrl) && !newImageUrl.equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL); // Guard against setting the image to no image
         List<ProductChangeType> productChangeTypes = new ArrayList<>();
