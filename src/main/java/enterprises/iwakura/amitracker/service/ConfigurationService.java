@@ -7,6 +7,7 @@ import com.google.gson.Gson;
 import enterprises.iwakura.amitracker.config.CacheConfiguration;
 import enterprises.iwakura.amitracker.config.ProductChangeAnnouncementConfiguration;
 import enterprises.iwakura.amitracker.config.ProductQueryConfiguration;
+import enterprises.iwakura.amitracker.config.ProxyConfiguration;
 import enterprises.iwakura.irminsul.DatabaseServiceConfiguration;
 import enterprises.iwakura.jean.Jean;
 import enterprises.iwakura.jean.LoadOptions;
@@ -71,5 +72,14 @@ public class ConfigurationService {
      */
     public ProductChangeAnnouncementConfiguration getProductChangeAnnouncementConfiguration() {
         return jean.getOrLoad("product-change-announcement", ProductChangeAnnouncementConfiguration.class);
+    }
+
+    /**
+     * Gets the ProxyConfiguration
+     *
+     * @return ProxyConfiguration
+     */
+    public ProxyConfiguration getProxyConfiguration() {
+        return jean.getOrLoad("proxy", ProxyConfiguration.class);
     }
 }

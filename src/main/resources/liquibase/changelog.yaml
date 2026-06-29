@@ -38,3 +38,9 @@ databaseChangeLog:
   - include:
       file: 0013-drop-product-query-availability-filters.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0014-proxy.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: 0015-proxy-indexes.yaml
+      relativeToChangelogFile: true

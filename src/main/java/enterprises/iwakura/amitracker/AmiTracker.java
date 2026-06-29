@@ -7,10 +7,13 @@ import com.jagrosh.jdautilities.command.CommandClientBuilder;
 import enterprises.iwakura.amitracker.command.AmiTrackerCommand;
 import enterprises.iwakura.amitracker.command.SubCommand;
 import enterprises.iwakura.amitracker.service.AmiAmiQueryService;
+import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.ConfigurationService;
 import enterprises.iwakura.amitracker.service.DatabaseService;
 import enterprises.iwakura.amitracker.service.ProductChangeAnnounceService;
+import enterprises.iwakura.amitracker.service.ProxyService;
 import enterprises.iwakura.amitracker.service.scheduler.BaseScheduler;
+import enterprises.iwakura.amitracker.service.scheduler.DiscordBaseScheduler;
 import enterprises.iwakura.amitracker.service.scheduler.ProductQueryScheduler;
 import enterprises.iwakura.ganyu.Ganyu;
 import enterprises.iwakura.ganyu.GanyuCommand;
@@ -22,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
+import net.dv8tion.jda.api.utils.Once;
 
 @Slf4j
 @Bean
@@ -31,10 +35,12 @@ public class AmiTracker extends Module {
     public static final String AMI_AMI_IMAGE_URL = "https://img.amiami.com/%s";
     public static final String IMAGE_NOT_FOUND_URL = "https://goddrinksjava.net/akasha/data-source/hetzner/public/amitracker/product/404.png";
 
+    private final ConcurrencyService concurrencyService;
     private final ConfigurationService configurationService;
     private final DatabaseService databaseService;
     private final AmiAmiQueryService amiAmiQueryService;
     private final ProductChangeAnnounceService productChangeAnnounceService;
+    private final ProxyService proxyService;
 
     private final List<ListenerAdapter> listeners;
 
@@ -55,10 +61,16 @@ public class AmiTracker extends Module {
         log.info("");
 
         configurationService.init(this.getModuleDirectoryPath());
+        concurrencyService.init();
         databaseService.initialize();
         amiAmiQueryService.init();
+        proxyService.init();
         productChangeAnnounceService.init();
-        baseSchedulers.forEach(BaseScheduler::initialize);
+        baseSchedulers.forEach(scheduler -> {
+            if (!(scheduler instanceof DiscordBaseScheduler)) {
+                scheduler.initialize();
+            }
+        });
 
         log.info("{} started in {} ms", info.getName(), System.currentTimeMillis() - startMillis);
     }

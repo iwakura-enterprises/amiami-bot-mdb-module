@@ -39,6 +39,14 @@ dependencies {
     // Guava
     amber 'com.google.guava:guava:33.5.0-jre'
 
+    // OkHttp
+    amber 'com.squareup.okhttp3:okhttp:5.4.0'
+
+    // Mapstruct
+    amber "org.mapstruct:mapstruct:1.6.3"
+    annotationProcessor "org.mapstruct:mapstruct-processor:1.6.3"
+    annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
+
     // SLF4J
     compileOnly 'org.apache.logging.log4j:log4j-slf4j2-impl:2.23.1'
     compileOnly 'org.apache.logging.log4j:log4j-api:2.23.1'

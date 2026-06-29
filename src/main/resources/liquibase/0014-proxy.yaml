@@ -1,0 +1,78 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0014-proxy-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_proxy
+                  name: id
+                  type: BIGINT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: state
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: protocol
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: ip
+                  type: VARCHAR(255)
+              - column:
+                  constraints:
+                    nullable: false
+                  name: port
+                  type: INT
+              - column:
+                  constraints:
+                    nullable: false
+                  name: score
+                  type: DOUBLE
+                  defaultValueNumeric: 0
+              - column:
+                  constraints:
+                    nullable: false
+                  name: latencyMillis
+                  type: INT
+                  defaultValueNumeric: 0
+              - column:
+                  constraints:
+                    nullable: false
+                  name: timesAlive
+                  type: INT
+                  defaultValueNumeric: 0
+              - column:
+                  constraints:
+                    nullable: false
+                  name: timesDead
+                  type: INT
+                  defaultValueNumeric: 0
+              - column:
+                  constraints:
+                    nullable: false
+                  name: lastUsedAt
+                  type: timestamp
+              - column:
+                  name: countyCode
+                  type: VARCHAR(255)
+              - column:
+                  name: anonymityLevel
+                  type: VARCHAR(255)
+              - column:
+                  name: lastError
+                  type: TEXT
+              - column:
+                  name: responseData
+                  type: TEXT
+            tableName: proxy

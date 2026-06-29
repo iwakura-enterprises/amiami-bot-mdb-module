@@ -1,0 +1,31 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0015-proxy-indexes-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createIndex:
+            indexName: idx_proxy_protocol_ip_port
+            tableName: proxy
+            unique: false
+            columns:
+              - column:
+                  name: protocol
+              - column:
+                  name: ip
+              - column:
+                  name: port
+  - changeSet:
+      id: 0015-proxy-indexes-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createIndex:
+            indexName: idx_proxy_state_lastusedat
+            tableName: proxy
+            unique: false
+            columns:
+              - column:
+                  name: state
+              - column:
+                  name: lastUsedAt

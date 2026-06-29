@@ -2,6 +2,7 @@ package enterprises.iwakura.amitracker.service;
 
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -9,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.RequiredArgsConstructor;
@@ -24,11 +26,17 @@ public class ConcurrencyService {
     private final Executor queryExecutor = Executors.newFixedThreadPool(8);
     private final Executor commandExecutor = Executors.newCachedThreadPool();
     private final Executor throttledExecutor = Executors.newCachedThreadPool();
+    private Executor proxyExecutor = Executors.newFixedThreadPool(1); // Will be replaced
 
     private final Map<String, Queue<Runnable>> throttleQueues = new ConcurrentHashMap<>();
     private final Map<String, AtomicBoolean> throttleActive = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduledExecutor = Executors.newScheduledThreadPool(4);
 
+    private final ConfigurationService configurationService;
+
+    public void init() {
+        proxyExecutor = Executors.newFixedThreadPool(configurationService.getProxyConfiguration().getProbeThreads());
+    }
 
     public void scheduleQuery(Runnable runnable) {
         queryExecutor.execute(runSafe(runnable, "Query"));
@@ -36,6 +44,18 @@ public class ConcurrencyService {
 
     public void scheduleCommand(Runnable runnable) {
         commandExecutor.execute(runSafe(runnable, "Command"));
+    }
+
+    public <T> CompletableFuture<T> scheduleProxy(Supplier<T> supplier) {
+        var future = new CompletableFuture<T>();
+        proxyExecutor.execute(() -> {
+            try {
+                future.complete(supplier.get());
+            } catch (Throwable throwable) {
+                future.completeExceptionally(throwable);
+            }
+        });
+        return future;
     }
 
     public void scheduleThrottled(String key, Runnable runnable) {
