@@ -44,3 +44,6 @@ databaseChangeLog:
   - include:
       file: 0015-proxy-indexes.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0016-proxy-unique-constraint.yaml
+      relativeToChangelogFile: true

@@ -102,6 +102,48 @@ public class ProxyRepository extends AmiBaseRepository<ProxyEntity, Long> {
         });
     }
 
+    @Override
+    public ProxyEntity save(ProxyEntity entity) {
+        if (entity.getId() != null) {
+            return super.save(entity);
+        }
+
+        return databaseService.runInThreadTransaction(session -> {
+            var sql = """
+                      INSERT INTO proxy (state, protocol, ip, port, score, latencyMillis, timesAlive, timesDead,
+                                        lastUsedAt, countyCode, anonymityLevel, lastError, responseData)
+                      VALUES (:state, :protocol, :ip, :port, :score, :latencyMillis, :timesAlive, :timesDead,
+                              :lastUsedAt, :countyCode, :anonymityLevel, :lastError, :responseData)
+                      ON CONFLICT (protocol, ip, port) DO NOTHING
+                      """;
+            session.createNativeQuery(sql)
+                .setParameter("state", entity.getState().name())
+                .setParameter("protocol", entity.getProtocol().name())
+                .setParameter("ip", entity.getIp())
+                .setParameter("port", entity.getPort())
+                .setParameter("score", entity.getScore())
+                .setParameter("latencyMillis", entity.getLatencyMillis())
+                .setParameter("timesAlive", entity.getTimesAlive())
+                .setParameter("timesDead", entity.getTimesDead())
+                .setParameter("lastUsedAt", entity.getLastUsedAt())
+                .setParameter("countyCode", entity.getCountyCode())
+                .setParameter("anonymityLevel", entity.getAnonymityLevel() != null ? entity.getAnonymityLevel().name() : null)
+                .setParameter("lastError", entity.getLastError())
+                .setParameter("responseData", entity.getResponseData())
+                .executeUpdate();
+
+            var hql = """
+                      SELECT p FROM ProxyEntity p
+                      WHERE p.protocol = :protocol AND p.ip = :ip AND p.port = :port
+                      """;
+            return session.createQuery(hql, ProxyEntity.class)
+                .setParameter("protocol", entity.getProtocol())
+                .setParameter("ip", entity.getIp())
+                .setParameter("port", entity.getPort())
+                .uniqueResult();
+        });
+    }
+
     /**
      * Picks the best candidate for sending requests
      *

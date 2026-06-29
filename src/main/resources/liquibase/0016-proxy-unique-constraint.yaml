@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0016-proxy-unique-constraint-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropIndex:
+            indexName: idx_proxy_protocol_ip_port
+            tableName: proxy
+  - changeSet:
+      id: 0016-proxy-unique-constraint-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addUniqueConstraint:
+            constraintName: uq_proxy_protocol_ip_port
+            tableName: proxy
+            columnNames: protocol, ip, port
