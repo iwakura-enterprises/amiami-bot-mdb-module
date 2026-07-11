@@ -9,6 +9,7 @@ import java.net.Proxy.Type;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -171,7 +172,7 @@ public class ProxyService {
                     log.error("Uncaught exception during probe of proxy {}", proxy.getId(), exception);
                     proxy.setState(ProxyState.NOT_READY);
                 } else if (proxyState == ProxyState.READY) {
-                    log.info("Working proxy {} with score {}", proxy.getId(), proxy.calculateScore());
+                    log.debug("Working proxy {} with score {}", proxy.getId(), proxy.calculateScore());
                 }
                 return proxy;
             }))
@@ -183,7 +184,30 @@ public class ProxyService {
         log.info("Probed {} proxies, {} of them are READY",
             updatedProxies.size(), updatedProxies.stream().filter(it -> it.getState() == ProxyState.READY).count()
         );
-        proxyRepository.saveAll(updatedProxies);
+
+        // saved in a stable id order so this doesn't lock rows in a different order than other
+        // concurrent writers (e.g. checkLowQualityProxies), which is what causes deadlocks
+        var orderedProxies = updatedProxies.stream()
+            .sorted(Comparator.comparing(ProxyEntity::getId))
+            .toList();
+        proxyRepository.saveAll(orderedProxies);
+    }
+
+    /**
+     * Checks any low quality proxies
+     */
+    public void checkLowQualityProxies() {
+        var proxyConfig = configurationService.getProxyConfiguration();
+
+        if (!proxyConfig.isProxyFetchEnabled()) {
+            return;
+        }
+
+        var updatedProxies = proxyRepository.useUpLowScoreProxies(proxyConfig.getUsedUpScore());
+
+        if (updatedProxies != 0) {
+            log.info("Used up {} proxies", updatedProxies);
+        }
     }
 
     /**

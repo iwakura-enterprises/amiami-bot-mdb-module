@@ -18,6 +18,7 @@ public class ProxyScheduler extends BaseScheduler {
     public void initialize() {
         log.info("Initializing ProxyScheduler...");
         this.schedule("Fetch", 0, 30, TimeUnit.MINUTES, proxyService::fetchPrexies);
-        this.schedule("Probe", 0, 1, TimeUnit.MINUTES, proxyService::probeProxies);
+        this.schedule("Probe", 0, 30, TimeUnit.SECONDS, proxyService::probeProxies);
+        this.schedule("Probe", 0, 2, TimeUnit.MINUTES, proxyService::checkLowQualityProxies);
     }
 }

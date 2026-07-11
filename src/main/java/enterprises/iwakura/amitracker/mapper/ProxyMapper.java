@@ -31,7 +31,7 @@ public interface ProxyMapper {
     ProxyDTO toDTO(ProxyEntity proxy);
 
     @AfterMapping
-    default void afterMapping(ProxyEntity entity) {
+    default void afterMapping(@MappingTarget ProxyEntity entity) {
         entity.calculateScore();
     }
 }

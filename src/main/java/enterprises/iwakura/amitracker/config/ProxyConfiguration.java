@@ -25,6 +25,11 @@ public class ProxyConfiguration {
     private double usedUpReliabilityRatio = 0.3;
 
     /**
+     *
+     */
+    private double usedUpScore = 0.5;
+
+    /**
      * The number of threads to schedule probes from
      */
     private int probeThreads = 20;

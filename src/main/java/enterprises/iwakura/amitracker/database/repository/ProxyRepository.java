@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+import org.hibernate.Session;
+
 import enterprises.iwakura.amitracker.database.entity.ProxyEntity;
 import enterprises.iwakura.amitracker.mapper.ProxyMapper;
 import enterprises.iwakura.amitracker.object.ProxyDTO;
@@ -16,6 +18,21 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Bean
 public class ProxyRepository extends AmiBaseRepository<ProxyEntity, Long> {
+
+    /**
+     * Size of the score-ranked pool weighted random selection is drawn from
+     */
+    private static final int PICK_POOL_SIZE = 100;
+
+    /**
+     * Proxies used more recently than this are skipped, so the same proxy isn't hammered back-to-back
+     */
+    private static final int PICK_COOLDOWN_SECONDS = 30;
+
+    /**
+     * Controls how strongly high scores are preferred over low ones
+     */
+    private static final double SCORE_SHARPNESS = 3.0;
 
     private final ProxyMapper proxyMapper;
 
@@ -145,27 +162,83 @@ public class ProxyRepository extends AmiBaseRepository<ProxyEntity, Long> {
     }
 
     /**
-     * Picks the best candidate for sending requests
-     *
-     * @return Optional of ProxyEntity
+     * Picks a proxy candidate using weighted random selection within a score-ranked pool
      */
     public Optional<ProxyEntity> pick() {
         return databaseService.runInThreadTransaction(session -> {
+            var candidates = findPickCandidates(session, OffsetDateTime.now().minusSeconds(PICK_COOLDOWN_SECONDS));
+            if (candidates.isEmpty()) {
+                candidates = findPickCandidates(session, null);
+            }
+            if (candidates.isEmpty()) {
+                return Optional.empty();
+            }
+
+            var selected = weightedPick(candidates);
+            selected.setLastUsedAt(OffsetDateTime.now());
+            return Optional.of(save(selected));
+        });
+    }
+
+    private List<ProxyEntity> findPickCandidates(Session session, OffsetDateTime cooldownCutoff) {
+        if (cooldownCutoff != null) {
             var hql = """
-                      SELECT p
-                      FROM ProxyEntity p
-                      WHERE p.state = ProxyState.READY
-                      ORDER BY p.lastUsedAt ASC
-                      LIMIT 10
-                      """;
-            var candidates = session.createQuery(hql, ProxyEntity.class)
+                  SELECT p
+                  FROM ProxyEntity p
+                  WHERE p.state = ProxyState.READY AND p.lastUsedAt <= :cooldownCutoff
+                  ORDER BY p.score DESC
+                  LIMIT :poolSize
+                  """;
+            return session.createQuery(hql, ProxyEntity.class)
+                .setParameter("cooldownCutoff", cooldownCutoff)
+                .setParameter("poolSize", PICK_POOL_SIZE)
                 .getResultList();
-            return candidates.stream()
-                .max(Comparator.comparingDouble(ProxyEntity::getScore))
-                .map(proxy -> {
-                    proxy.setLastUsedAt(OffsetDateTime.now());
-                    return save(proxy);
-                });
+        } else {
+            var hql = """
+                  SELECT p
+                  FROM ProxyEntity p
+                  WHERE p.state = ProxyState.READY
+                  ORDER BY p.score DESC
+                  LIMIT :poolSize
+                  """;
+            return session.createQuery(hql, ProxyEntity.class)
+                .setParameter("poolSize", PICK_POOL_SIZE)
+                .getResultList();
+        }
+    }
+
+    private ProxyEntity weightedPick(List<ProxyEntity> candidates) {
+        double totalWeight = candidates.stream()
+            .mapToDouble(p -> Math.exp(p.getScore() * SCORE_SHARPNESS))
+            .sum();
+
+        double spin = Math.random() * totalWeight;
+        double cumulative = 0;
+        for (var proxy : candidates) {
+            cumulative += Math.exp(proxy.getScore() * SCORE_SHARPNESS);
+            if (cumulative >= spin) {
+                return proxy;
+            }
+        }
+
+        return candidates.getLast();
+    }
+
+    /**
+     * Marks all READY proxies scoring below the given threshold as USED_UP so they stop being picked.
+     *
+     * @param score Score threshold; proxies with a lower score are marked USED_UP
+     */
+    public int useUpLowScoreProxies(double score) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql = """
+                      UPDATE ProxyEntity p
+                      SET p.state = ProxyState.USED_UP
+                      WHERE p.state = ProxyState.READY AND p.score < :score
+                      """;
+            return session.createMutationQuery(hql)
+                .setParameter("score", score)
+                .executeUpdate();
         });
     }
 }

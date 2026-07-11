@@ -31,8 +31,6 @@ public class ProxyScrapeProxyFetcher extends JsonProxyFetcher {
                 .ip(proxy.ip())
                 .port(proxy.port())
                 .anonymityLevel(parseAnonymity(proxy.anonymity()))
-                .timesAlive(proxy.times_alive())
-                .timesDead(proxy.times_dead())
                 .build()
             )
             .filter(dto -> dto.getProtocol() != null)

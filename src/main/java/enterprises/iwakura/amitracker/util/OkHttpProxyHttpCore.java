@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 import enterprises.iwakura.amitracker.object.ProxyDTO;
 import enterprises.iwakura.amitracker.service.ConfigurationService;
@@ -64,6 +65,14 @@ public class OkHttpProxyHttpCore extends HttpCore {
      */
     protected Request.Builder createRequestBuilder() {
         return new Request.Builder();
+    }
+
+    @Override
+    public Executor getExecutor() {
+        if (proxyOverride != null) {
+            return Runnable::run;
+        }
+        return super.getExecutor();
     }
 
     @Override
@@ -138,9 +147,8 @@ public class OkHttpProxyHttpCore extends HttpCore {
                         break; // from retry loop
                     } catch (Throwable throwable) {
                         if (proxyOverride == null) {
-                            log.warn("Request failed, retry {}/{} via proxy[{}] -> {}",
-                                retry + 1, retries, proxy.getId(), request.computeRequestUrl(),
-                                throwable
+                            log.warn("Request failed, retry {}/{} via proxy[{}] -> {}, {}",
+                                retry + 1, retries, proxy.getId(), request.computeRequestUrl(), throwable.toString()
                             );
                         }
                         finalException = throwable;
