@@ -9,6 +9,7 @@ import enterprises.iwakura.amitracker.config.CacheConfiguration;
 import enterprises.iwakura.amitracker.config.ProductChangeAnnouncementConfiguration;
 import enterprises.iwakura.amitracker.config.ProductQueryConfiguration;
 import enterprises.iwakura.amitracker.config.ProxyConfiguration;
+import enterprises.iwakura.amitracker.config.SentryConfiguration;
 import enterprises.iwakura.irminsul.DatabaseServiceConfiguration;
 import enterprises.iwakura.jean.Jean;
 import enterprises.iwakura.jean.LoadOptions;
@@ -91,5 +92,14 @@ public class ConfigurationService {
      */
     public LimitationConfiguration getLimitationConfiguration() {
         return jean.getOrLoad("limitation", LimitationConfiguration.class);
+    }
+
+    /**
+     * Gets the SentryConfiguration
+     *
+     * @return SentryConfiguration
+     */
+    public SentryConfiguration getSentryConfiguration() {
+        return jean.getOrLoad("sentry", SentryConfiguration.class);
     }
 }

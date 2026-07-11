@@ -152,7 +152,6 @@ public class OkHttpProxyHttpCore extends HttpCore {
                             );
                         }
                         finalException = throwable;
-                        // TODO: Nastavit na not ready pokud to třeba 10x failne nebo něco takového
                         proxy.addTimesDead();
                         proxy.setLastError(throwable.toString());
                     }
