@@ -4,6 +4,7 @@ import java.nio.file.Path;
 
 import com.google.gson.Gson;
 
+import enterprises.iwakura.amitracker.command.LimitationConfiguration;
 import enterprises.iwakura.amitracker.config.CacheConfiguration;
 import enterprises.iwakura.amitracker.config.ProductChangeAnnouncementConfiguration;
 import enterprises.iwakura.amitracker.config.ProductQueryConfiguration;
@@ -81,5 +82,14 @@ public class ConfigurationService {
      */
     public ProxyConfiguration getProxyConfiguration() {
         return jean.getOrLoad("proxy", ProxyConfiguration.class);
+    }
+
+    /**
+     * Gets the LimitationConfiguration
+     *
+     * @return LimitationConfiguration
+     */
+    public LimitationConfiguration getLimitationConfiguration() {
+        return jean.getOrLoad("limitation", LimitationConfiguration.class);
     }
 }

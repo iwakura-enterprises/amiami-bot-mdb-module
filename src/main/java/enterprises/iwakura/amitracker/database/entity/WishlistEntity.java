@@ -79,16 +79,4 @@ public class WishlistEntity {
         wishlist.setStockChangeEnabled(true);
         return wishlist;
     }
-
-    /**
-     * Checks if the wishlist contains a product with the specified product code.
-     *
-     * @param productCode the product code to check
-     * @return true if the product is in the wishlist, false otherwise
-     */
-    public boolean containsProductCode(String productCode) {
-        return ListUtils.emptyIfNull(entries)
-            .stream()
-            .anyMatch(entry -> entry.getProduct().getCode().equalsIgnoreCase(productCode));
-    }
 }

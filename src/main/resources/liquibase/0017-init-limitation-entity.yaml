@@ -1,0 +1,66 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0017-init-limitation-entity-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: limitation
+            columns:
+              - column:
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_limitation
+                  name: id
+                  type: BIGINT
+              - column:
+                  name: createdAt
+                  type: timestamp
+              - column:
+                  constraints:
+                    nullable: false
+                  name: maxWishlists
+                  type: INT
+                  defaultValueNumeric: 1
+              - column:
+                  constraints:
+                    nullable: false
+                  name: maxWishlistEntriesPerList
+                  type: INT
+                  defaultValueNumeric: 10
+              - column:
+                  constraints:
+                    nullable: false
+                  name: maxChannelProductListQueries
+                  type: INT
+                  defaultValueNumeric: 5
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: guild_id
+                  type: BIGINT
+  - changeSet:
+      id: 0017-init-limitation-entity-2
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: user_id
+            baseTableName: limitation
+            constraintName: FK_LIMITATION_ON_USER
+            referencedColumnNames: id
+            referencedTableName: user
+  - changeSet:
+      id: 0017-init-limitation-entity-3
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: guild_id
+            baseTableName: limitation
+            constraintName: FK_LIMITATION_ON_GUILD
+            referencedColumnNames: id
+            referencedTableName: guild

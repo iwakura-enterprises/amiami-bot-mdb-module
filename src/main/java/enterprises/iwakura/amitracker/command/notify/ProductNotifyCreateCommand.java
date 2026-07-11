@@ -9,6 +9,7 @@ import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEnt
 import enterprises.iwakura.amitracker.object.ProductSearchParameters;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.GuildService;
+import enterprises.iwakura.amitracker.service.LimitationService;
 import enterprises.iwakura.amitracker.service.ProductListService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
@@ -27,18 +28,20 @@ public class ProductNotifyCreateCommand extends ProductNotifySubCommand {
     private final UserService userService;
     private final GuildService guildService;
     private final ProductListService productListService;
+    private final LimitationService limitationService;
 
     @Bean
     private final BeanAccessor<ProductNotifyEditCommand> productNotifyEditCommand = new BeanAccessor<>(ProductNotifyEditCommand.class);
 
     public ProductNotifyCreateCommand(ConcurrencyService concurrencyService,
         UserService userService,
-        GuildService guildService, ProductListService productListService
+        GuildService guildService, ProductListService productListService, LimitationService limitationService
     ) {
         super(concurrencyService);
         this.userService = userService;
         this.guildService = guildService;
         this.productListService = productListService;
+        this.limitationService = limitationService;
 
         this.name = "create";
         this.help = "Creates new product search notification in this channel";
@@ -109,6 +112,16 @@ public class ProductNotifyCreateCommand extends ProductNotifySubCommand {
         if (existsSameProductQuery.isPresent()) {
             hook.editOriginal("This channel already has a product search notification with the same search parameters under the name '%s'!".formatted(
                 existsSameProductQuery.get()
+            )).queue();
+            return;
+        }
+
+        var limitations = limitationService.findEffectiveLimitationForGuild(guild.getIdLong());
+        var numberOfGuildChannelProductLists = productListService.countGuildChannelProductLists(guild.getIdLong());
+
+        if (numberOfGuildChannelProductLists >= limitations.getMaxChannelProductListQueries()) {
+            hook.editOriginal("You have reached the maximum number of product search notifications in this server! (%d)".formatted(
+                limitations.getMaxChannelProductListQueries()
             )).queue();
             return;
         }

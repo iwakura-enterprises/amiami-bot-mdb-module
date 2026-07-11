@@ -45,9 +45,9 @@ public class WishlistEntryRepository extends AmiBaseRepository<WishlistEntryEnti
         return databaseService.runInThreadTransaction(session -> {
             var hql =
                 """
-                    FROM WishlistEntryEntity we
-                    WHERE we.product.updatedAt IS NULL OR we.product.updatedAt <= :thresholdTime
-                    """;
+                FROM WishlistEntryEntity we
+                WHERE we.product.updatedAt IS NULL OR we.product.updatedAt <= :thresholdTime
+                """;
             var query = session.createQuery(hql, WishlistEntryEntity.class);
             query.setParameter("thresholdTime", OffsetDateTime.now().minus(intervalMillis, ChronoUnit.MILLIS));
             return query.list();
@@ -66,9 +66,9 @@ public class WishlistEntryRepository extends AmiBaseRepository<WishlistEntryEnti
         return databaseService.runInThreadTransaction(session -> {
             // Check if the entry already exists
             String hql = """
-                FROM WishlistEntryEntity we
-                WHERE we.wishlist.id = :wishlistId AND we.product.id = :productId
-                """;
+                         FROM WishlistEntryEntity we
+                         WHERE we.wishlist.id = :wishlistId AND we.product.id = :productId
+                         """;
             var query = session.createQuery(hql, WishlistEntryEntity.class);
             query.setParameter("wishlistId", wishlist.getId());
             query.setParameter("productId", product.getId());
@@ -104,20 +104,20 @@ public class WishlistEntryRepository extends AmiBaseRepository<WishlistEntryEnti
     ) {
         return databaseService.runInThreadTransaction(session -> {
             String countHql = """
-                SELECT COUNT(we.id)
-                FROM WishlistEntryEntity we
-                WHERE we.wishlist.id = :wishlistId AND we.wishlist.user.id = :userId
-                """;
+                              SELECT COUNT(we.id)
+                              FROM WishlistEntryEntity we
+                              WHERE we.wishlist.id = :wishlistId AND we.wishlist.user.id = :userId
+                              """;
             long totalItems = Optional.ofNullable(session.createQuery(countHql, Long.class)
                 .setParameter("wishlistId", wishlistId)
                 .setParameter("userId", userId)
                 .uniqueResult()).orElse(0L);
 
             String hql = """
-                FROM WishlistEntryEntity we
-                WHERE we.wishlist.id = :wishlistId AND we.wishlist.user.id = :userId
-                ORDER BY we.createdAt DESC
-                """;
+                         FROM WishlistEntryEntity we
+                         WHERE we.wishlist.id = :wishlistId AND we.wishlist.user.id = :userId
+                         ORDER BY we.createdAt DESC
+                         """;
             List<WishlistEntryEntity> items = session.createQuery(hql, WishlistEntryEntity.class)
                 .setParameter("wishlistId", wishlistId)
                 .setParameter("userId", userId)
@@ -144,11 +144,11 @@ public class WishlistEntryRepository extends AmiBaseRepository<WishlistEntryEnti
     public boolean removeWishlistEntry(long userId, String wishlistName, String productCode) {
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
-                DELETE FROM WishlistEntryEntity we
-                WHERE we.wishlist.user.id = :userId
-                  AND LOWER(we.wishlist.name) = :wishlistName
-                  AND we.product.code = :productCode
-                """;
+                         DELETE FROM WishlistEntryEntity we
+                         WHERE we.wishlist.user.id = :userId
+                           AND LOWER(we.wishlist.name) = :wishlistName
+                           AND we.product.code = :productCode
+                         """;
             int deletedCount = session.createQuery(hql, null)
                 .setParameter("userId", userId)
                 .setParameter("wishlistName", wishlistName.toLowerCase())
@@ -176,18 +176,38 @@ public class WishlistEntryRepository extends AmiBaseRepository<WishlistEntryEnti
     ) {
         return databaseService.runInThreadTransaction(session -> {
             String hql = """
-                FROM WishlistEntryEntity we
-                WHERE we.wishlist.user.id = :userId
-                  AND we.wishlist.id = :wishlistId
-                  AND we.product.code LIKE :searchPattern
-                ORDER BY we.product.code ASC
-                """;
+                         FROM WishlistEntryEntity we
+                         WHERE we.wishlist.user.id = :userId
+                           AND we.wishlist.id = :wishlistId
+                           AND we.product.code LIKE :searchPattern
+                         ORDER BY we.product.code ASC
+                         """;
             return session.createQuery(hql, WishlistEntryEntity.class)
                 .setParameter("userId", userId)
                 .setParameter("wishlistId", wishlistId)
                 .setParameter("searchPattern", "%" + productCode.toUpperCase() + "%")
                 .setMaxResults(maxElements)
                 .getResultList();
+        });
+    }
+
+    /**
+     * Counts the number of entries for a wishlist
+     *
+     * @param wishlistId Wishlist ID
+     *
+     * @return Number of entries
+     */
+    public Long countEntriesForWishlist(long wishlistId) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql =
+                """
+                FROM WishlistEntryEntity  we
+                WHERE we.wishlist.id = :wishlistId
+                """;
+            return session.createQuery(hql, Long.class)
+                .setParameter("wishlistId", wishlistId)
+                .getResultCount();
         });
     }
 }

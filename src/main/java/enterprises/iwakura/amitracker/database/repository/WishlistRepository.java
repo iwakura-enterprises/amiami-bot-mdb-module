@@ -181,4 +181,24 @@ public class WishlistRepository extends AmiBaseRepository<WishlistEntity, Long> 
                 .getResultList();
         });
     }
+
+    /**
+     * Counts all wishlists for user by ID
+     *
+     * @param userId User ID
+     *
+     * @return Number of wishlists that the user has
+     */
+    public long countForUserId(long userId) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql =
+                """
+                FROM WishlistEntity w
+                WHERE w.user.id = :userId
+                """;
+            return session.createQuery(hql, Long.class)
+                .setParameter("userId", userId)
+                .getResultCount();
+        });
+    }
 }

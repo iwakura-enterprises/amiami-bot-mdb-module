@@ -47,3 +47,6 @@ databaseChangeLog:
   - include:
       file: 0016-proxy-unique-constraint.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0017-init-limitation-entity.yaml
+      relativeToChangelogFile: true

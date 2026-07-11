@@ -87,6 +87,9 @@ public class WishlistAddCommand extends WishlistSubCommand {
                     productCode, wishlistName)).queue();
                 case WISHLIST_ENTRY_NOT_ADDED -> hook.editOriginal("Failed to add product `%s` to your wishlist `%s`.".formatted(
                     productCode, wishlistName)).queue();
+                case WISHLIST_ENTRY_LIMIT_REACHED -> hook.editOriginal("You have reached the maximum number of wishlisted items in this wishlist! (%s)".formatted(
+                    errorContext.getDetail()
+                )).queue();
                 default -> hook.editOriginal("An unknown error occurred while adding product `%s` to your wishlist `%s`.".formatted(
                     productCode, wishlistName)).queue();
             }

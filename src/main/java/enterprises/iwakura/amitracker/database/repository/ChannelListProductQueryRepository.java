@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Optional;
 
 import enterprises.iwakura.amitracker.constant.ProductChangeType;
-import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
@@ -62,28 +61,28 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
             }
 
             var sql = """
-                SELECT DISTINCT c.*
-                FROM channel_product_list_query c
-                JOIN product_query pq ON pq.id = c.productlistquery_id
-                JOIN product_list_query_result_entry e ON e.productlistquery_id = pq.id
-                WHERE e.product_id = :productId
-                  AND (CAST(:productListQueryId AS BIGINT) IS NULL OR c.productlistquery_id = CAST(:productListQueryId AS BIGINT))
-                  AND (
-                      (:checkPriceDiscount = true AND c.pricediscountenabled = true)
-                      OR
-                      (:checkStockChange = true AND (
-                          (CAST(:newProductState AS TEXT) IS NOT NULL AND jsonb_exists(c.statetoenabled, CAST(:newProductState AS TEXT))) OR
-                          (CAST(:oldProductState AS TEXT) IS NOT NULL AND jsonb_exists(c.statefromenabled, CAST(:oldProductState AS TEXT)))
-                      ))
-                      OR
-                      (:checkNewProducts = true AND c.newproductsenabled = true)
-                      OR
-                      (:imageUrlChanged = true AND EXISTS (
-                          SELECT 1 FROM product_change_announcement a
-                          WHERE a.channelproductlistqueryentity_id = c.id AND a.product_id = :productId
-                      ))
-                  )
-                """;
+                      SELECT DISTINCT c.*
+                      FROM channel_product_list_query c
+                      JOIN product_query pq ON pq.id = c.productlistquery_id
+                      JOIN product_list_query_result_entry e ON e.productlistquery_id = pq.id
+                      WHERE e.product_id = :productId
+                        AND (CAST(:productListQueryId AS BIGINT) IS NULL OR c.productlistquery_id = CAST(:productListQueryId AS BIGINT))
+                        AND (
+                            (:checkPriceDiscount = true AND c.pricediscountenabled = true)
+                            OR
+                            (:checkStockChange = true AND (
+                                (CAST(:newProductState AS TEXT) IS NOT NULL AND jsonb_exists(c.statetoenabled, CAST(:newProductState AS TEXT))) OR
+                                (CAST(:oldProductState AS TEXT) IS NOT NULL AND jsonb_exists(c.statefromenabled, CAST(:oldProductState AS TEXT)))
+                            ))
+                            OR
+                            (:checkNewProducts = true AND c.newproductsenabled = true)
+                            OR
+                            (:imageUrlChanged = true AND EXISTS (
+                                SELECT 1 FROM product_change_announcement a
+                                WHERE a.channelproductlistqueryentity_id = c.id AND a.product_id = :productId
+                            ))
+                        )
+                      """;
 
             var newState = Optional.ofNullable(productChangeHolder)
                 .map(ProductChangeHolder::getNewProductState)
@@ -96,7 +95,8 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
 
             return session.createNativeQuery(sql, ChannelProductListQueryEntity.class)
                 .setParameter("productId", productEntity.getId())
-                .setParameter("productListQueryId", productListQueryEntity != null ? productListQueryEntity.getId() : null)
+                .setParameter("productListQueryId",
+                    productListQueryEntity != null ? productListQueryEntity.getId() : null)
                 .setParameter("checkPriceDiscount", checkPriceDiscount)
                 .setParameter("checkStockChange", checkStockChange)
                 .setParameter("newProductState", newState)
@@ -138,10 +138,10 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
     public Optional<ChannelProductListQueryEntity> findByChannelIdAndName(long channelId, String name) {
         return databaseService.runInThreadTransaction(session -> {
             var hql = """
-                  FROM ChannelProductListQueryEntity c
-                  WHERE c.channel.id = :channelId
-                  AND LOWER(c.name) = LOWER(:name)
-                  """;
+                      FROM ChannelProductListQueryEntity c
+                      WHERE c.channel.id = :channelId
+                      AND LOWER(c.name) = LOWER(:name)
+                      """;
 
             return session.createQuery(hql, ChannelProductListQueryEntity.class)
                 .setParameter("channelId", channelId)
@@ -182,11 +182,11 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
     public List<ChannelProductListQueryEntity> suggestByGuild(long guildId, String searchingName, int maxElements) {
         return databaseService.runInThreadTransaction(session -> {
             var hql = """
-                  FROM ChannelProductListQueryEntity c
-                  WHERE c.channel.guild.id = :guildId
-                  AND c.name LIKE :searchingName
-                  ORDER BY c.name ASC
-                  """;
+                      FROM ChannelProductListQueryEntity c
+                      WHERE c.channel.guild.id = :guildId
+                      AND c.name LIKE :searchingName
+                      ORDER BY c.name ASC
+                      """;
 
             return session.createQuery(hql, ChannelProductListQueryEntity.class)
                 .setParameter("guildId", guildId)
@@ -208,15 +208,35 @@ public class ChannelListProductQueryRepository extends AmiBaseRepository<Channel
     public Optional<ChannelProductListQueryEntity> findByGuildIdAndId(long guildId, long entityId) {
         return databaseService.runInThreadTransaction(session -> {
             var hql = """
-                  FROM ChannelProductListQueryEntity c
-                  WHERE c.id = :entityId
-                  AND c.channel.guild.id = :guildId
-                  """;
+                      FROM ChannelProductListQueryEntity c
+                      WHERE c.id = :entityId
+                      AND c.channel.guild.id = :guildId
+                      """;
 
             return session.createQuery(hql, ChannelProductListQueryEntity.class)
                 .setParameter("entityId", entityId)
                 .setParameter("guildId", guildId)
                 .uniqueResultOptional();
+        });
+    }
+
+    /**
+     * Finds the number of product list queries for the guild
+     *
+     * @param guildId Guild ID
+     *
+     * @return Number of product list queries
+     */
+    public Long countGuildChannelProductLists(long guildId) {
+        return databaseService.runInThreadTransaction(session -> {
+            var hql =
+                """
+                FROM ChannelProductListQueryEntity c
+                WHERE c.channel.guild.id = :guildId
+                """;
+            return session.createQuery(hql, Long.class)
+                .setParameter("guildId", guildId)
+                .getResultCount();
         });
     }
 }

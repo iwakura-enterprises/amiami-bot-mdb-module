@@ -63,6 +63,7 @@ public class WishlistCreateCommand extends WishlistSubCommand {
         }
 
         wishlistService.ensureDefaultWishlistExists(user.getIdLong());
+
         var errorContext = wishlistService.createWishlist(user.getIdLong(), wishlistName);
 
         if (errorContext.isSuccess()) {
@@ -70,6 +71,7 @@ public class WishlistCreateCommand extends WishlistSubCommand {
         } else {
             switch (errorContext.getType()) {
                 case WISHLIST_ALREADY_EXISTS -> hook.editOriginal("Wishlist '" + wishlistName + "' already exists!").queue();
+                case WISHLIST_LIMIT_REACHED -> hook.editOriginal("You have reached the maximum number of wishlists! (%s)".formatted(errorContext.getDetail())).queue();
                 default -> hook.editOriginal("An unknown error occurred while creating the wishlist.").queue();
             }
         }

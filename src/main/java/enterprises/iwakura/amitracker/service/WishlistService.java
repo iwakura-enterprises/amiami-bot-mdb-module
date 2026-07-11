@@ -1,6 +1,5 @@
 package enterprises.iwakura.amitracker.service;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +27,8 @@ public class WishlistService {
     public static final WishlistEntity DEFAULT_WISHLIST_ENTITY_PLACEHOLDER = WishlistEntity.createDefault();
 
     private final ProductService productService;
+    private final LimitationService limitationService;
+
     private final WishlistRepository wishlistRepository;
     private final WishlistEntryRepository wishlistEntryRepository;
     private final ProductChangeAnnouncementRepository productChangeAnnouncementRepository;
@@ -59,25 +60,31 @@ public class WishlistService {
 
         if (optionalWishlist.isPresent()) {
             var wishlist = optionalWishlist.get();
+            var limitations = limitationService.findEffectiveLimitationsForUser(userId);
+            var numberOfEntriesInWishlist = wishlistEntryRepository.countEntriesForWishlist(wishlist.getId());
 
-            if (!wishlistRepository.isProductInWishlist(wishlist.getId(), productCode)) {
-                var optionalProduct = productService.getOrQueryProduct(productCode);
+            if (numberOfEntriesInWishlist < limitations.getMaxWishlistEntriesPerList()) {
+                if (!wishlistRepository.isProductInWishlist(wishlist.getId(), productCode)) {
+                    var optionalProduct = productService.getOrQueryProduct(productCode);
 
-                if (optionalProduct.isPresent()) {
-                    var product = optionalProduct.get();
+                    if (optionalProduct.isPresent()) {
+                        var product = optionalProduct.get();
 
-                    var wishlistEntry = wishlistEntryRepository.createWishlistEntry(wishlist, product);
+                        var wishlistEntry = wishlistEntryRepository.createWishlistEntry(wishlist, product);
 
-                    if (wishlistEntry.isPresent()) {
-                        return ErrorContext.success();
+                        if (wishlistEntry.isPresent()) {
+                            return ErrorContext.success();
+                        } else {
+                            return ErrorContext.of(Type.WISHLIST_ENTRY_NOT_ADDED, productCode);
+                        }
                     } else {
-                        return ErrorContext.of(Type.WISHLIST_ENTRY_NOT_ADDED, productCode);
+                        return ErrorContext.of(Type.PRODUCT_NOT_FOUND, productCode);
                     }
                 } else {
-                    return ErrorContext.of(Type.PRODUCT_NOT_FOUND, productCode);
+                    return ErrorContext.of(Type.PRODUCT_ALREADY_IN_WISHLIST, productCode);
                 }
             } else {
-                return ErrorContext.of(Type.PRODUCT_ALREADY_IN_WISHLIST, productCode);
+                return ErrorContext.of(Type.WISHLIST_ENTRY_LIMIT_REACHED, String.valueOf(limitations.getMaxWishlistEntriesPerList()));
             }
         } else {
             return ErrorContext.of(Type.WISHLIST_NOT_FOUND, wishlistName);
@@ -179,6 +186,13 @@ public class WishlistService {
         if (optionalWishlist.isPresent()) {
             return ErrorContext.of(Type.WISHLIST_ALREADY_EXISTS, wishlistName);
         } else {
+            var limitations = limitationService.findEffectiveLimitationsForUser(userId);
+            var numberOfExistingWishlists = wishlistRepository.countForUserId(userId);
+
+            if (numberOfExistingWishlists >= limitations.getMaxWishlists()) {
+                return ErrorContext.of(Type.WISHLIST_LIMIT_REACHED, String.valueOf(limitations.getMaxWishlists()));
+            }
+
             wishlistRepository.createWishlist(userId, wishlistName);
             return ErrorContext.success();
         }

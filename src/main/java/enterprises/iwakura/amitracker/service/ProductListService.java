@@ -165,4 +165,15 @@ public class ProductListService {
     public Optional<ChannelProductListQueryEntity> getChannelProductList(long guildId, long entityId) {
         return channelListProductQueryRepository.findByGuildIdAndId(guildId, entityId);
     }
+
+    /**
+     * Finds the number of product list queries for the guild
+     *
+     * @param guildId Guild ID
+     *
+     * @return Number of product list queries
+     */
+    public Long countGuildChannelProductLists(long guildId) {
+        return channelListProductQueryRepository.countGuildChannelProductLists(guildId);
+    }
 }
