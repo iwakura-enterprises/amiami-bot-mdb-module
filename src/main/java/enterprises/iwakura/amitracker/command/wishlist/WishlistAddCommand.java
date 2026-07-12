@@ -1,6 +1,7 @@
 package enterprises.iwakura.amitracker.command.wishlist;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
@@ -11,13 +12,25 @@ import enterprises.iwakura.amitracker.service.ProductService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.amitracker.service.WishlistService;
 import enterprises.iwakura.amitracker.util.URLHelper;
+import enterprises.iwakura.jdainteractables.components.InteractableModal;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
+import net.dv8tion.jda.api.components.label.Label;
+import net.dv8tion.jda.api.components.textdisplay.TextDisplay;
+import net.dv8tion.jda.api.components.textinput.TextInput;
+import net.dv8tion.jda.api.components.textinput.TextInputStyle;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.unions.GuildMessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.CommandAutoCompleteInteractionEvent;
 import net.dv8tion.jda.api.interactions.InteractionHook;
+import net.dv8tion.jda.api.interactions.callbacks.IModalCallback;
+import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.interactions.modals.ModalMapping;
+import net.dv8tion.jda.api.modals.Modal;
 
 @Bean
 public class WishlistAddCommand extends WishlistSubCommand {
@@ -62,8 +75,44 @@ public class WishlistAddCommand extends WishlistSubCommand {
             guildService.getOrCreateGuild(guild);
         }
 
-        wishlistService.ensureDefaultWishlistExists(user.getIdLong());
         handleProductAdd(user, hook, wishlistName, productCode);
+    }
+
+    public void addUsingModal(
+        User user,
+        IModalCallback modalCallback
+    ) {
+        var modal = Modal.create("abc", "Wishlist a product")
+            .addComponents(TextDisplay.of(
+                """
+                Go on amiami.com, find a product you want to wishlist, copy its URL from the browser's URL bar and paste it here.
+                Alternatively, you can specify only the product's gcode.
+                """
+            ))
+            .addComponents(Label.of("Product (gcode/URL)",
+                TextInput.create(OPTION_PRODUCT_CODE, TextInputStyle.PARAGRAPH)
+                    .setPlaceholder("e.g., FIGURE-12345 or https://www.amiami.com/eng/detail/?gcode=FIGURE-12345")
+                    .setRequired(true)
+                    .build()
+            ))
+            .addComponents(TextDisplay.of(
+                """
+                If you want to wishlist a product to specific wishlist, please use the `/wishlist add` command.
+                """
+            ));
+
+        var interactableModal = new InteractableModal(modal, modalEvent -> {
+            var productCode = Optional.ofNullable(modalEvent.getValue(OPTION_PRODUCT_CODE)).map(ModalMapping::getAsString).orElse(null);
+
+            handleProductAdd(
+                user,
+                modalEvent.deferReply(true).complete(),
+                Constants.DEFAULT_WISHLIST_NAME,
+                productCode
+            );
+        });
+
+        modalCallback.replyModal(modal.build()).queue(interactableModal.registerOnCompleted());
     }
 
     public boolean handleProductAdd(User user, InteractionHook hook, String wishlistName, String productCode) {
@@ -71,6 +120,8 @@ public class WishlistAddCommand extends WishlistSubCommand {
             hook.editOriginal("Product code is required").queue();
             return false;
         }
+
+        wishlistService.ensureDefaultWishlistExists(user.getIdLong());
 
         productCode = URLHelper.extractProductCode(productCode, true);
 

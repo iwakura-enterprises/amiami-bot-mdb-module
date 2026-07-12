@@ -43,12 +43,12 @@ public class AboutCommand extends AmiTrackerCommand {
                     Thumbnail.fromUrl("https://goddrinksjava.net/akasha/data-source/hetzner/public/logo/ami-tracker-symbol.png")
                         .withDescription("Logo of Ami Tracker showing a silly fumo face."),
                     TextDisplay.of("# Ami Tracker"),
-                    TextDisplay.of("A companion bot for accessing, bookmarking and tracking AmiAmi™ and products there.")
+                    TextDisplay.of("A companion bot for accessing, bookmarking and tracking amiami™ and products there.")
                 ),
                 ActionRow.of(
                     Button.of(
                         ButtonStyle.LINK,
-                        "https://example.com",
+                        "https://discord.gg/3NnQ5Dpbux",
                         "Support",
                         Emoji.fromUnicode("🔗")
                     ),
@@ -60,7 +60,7 @@ public class AboutCommand extends AmiTrackerCommand {
                     )
                 ),
                 TextDisplay.of("All products and company names sent by this bot are registered trademarks of "
-                    + "their respective holders. **This bot or its services are not affiliated with or endorsed by AmiAmi™**"),
+                    + "their respective holders. **This bot or its services are not affiliated with or endorsed by amiami™**"),
                 TextDisplay.of("-# For any questions, concerns or requests, please contact the bot developer at `mayuna@iwakura.enterprises`"),
                 TextDisplay.of("-# Abusing functionalities provided by this bot may result in a permanent blacklist from using its services."),
                 Separator.createDivider(Separator.Spacing.SMALL),

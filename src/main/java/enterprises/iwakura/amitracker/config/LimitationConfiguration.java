@@ -1,4 +1,4 @@
-package enterprises.iwakura.amitracker.command;
+package enterprises.iwakura.amitracker.config;
 
 import lombok.Data;
 
