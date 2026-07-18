@@ -19,6 +19,9 @@ public class HelpCommand extends AmiTrackerCommand {
 
     public HelpCommand(ConcurrencyService concurrencyService) {
         super(concurrencyService);
+
+        this.name = "help";
+        this.help = "Shows tutorial tips how to use the bot and has FAQ";
     }
 
     @Override
