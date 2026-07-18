@@ -5,6 +5,6 @@ import lombok.Data;
 @Data
 public class SentryConfiguration {
 
-    private String dsn = "https://sentry-dsn.example.com";
+    private String dsn = "";
 
 }

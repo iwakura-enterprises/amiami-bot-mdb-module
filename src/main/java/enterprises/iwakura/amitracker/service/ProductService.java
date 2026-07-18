@@ -2,6 +2,7 @@ package enterprises.iwakura.amitracker.service;
 
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletionException;
 
 import enterprises.iwakura.amitracker.constant.Currency;
+import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.GuildEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
@@ -32,12 +34,45 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 @RequiredArgsConstructor
 public class ProductService {
 
+    public static final String TESTING_PRODUCT_CODE = "TEST-1225199X";
+
     private final ProductRepository productRepository;
     private final AmiAmiQueryService amiAmiQueryService;
     private final ProductProcessorService productProcessorService;
     private final CurrencyExchangeService currencyExchangeService;
 
     private final DecimalFormat CURRENCY_FORMATTER = new DecimalFormat("#.##");
+
+    public void init() {
+        log.info("Initializing ProductService...");
+
+        productRepository.findByCode(TESTING_PRODUCT_CODE)
+            .ifPresentOrElse(it -> {
+                log.info("Testing product {} is present via ID {}", TESTING_PRODUCT_CODE, it.getId());
+            }, () -> {
+                log.warn("Testing product {} does not exist! Creating...", TESTING_PRODUCT_CODE);
+                var testingProduct = new ProductEntity();
+                testingProduct.setCode(TESTING_PRODUCT_CODE);
+                testingProduct.setName("Testing Ami Tracker product");
+                testingProduct.setImageUrl("https://goddrinksjava.net/akasha/data-source/hetzner/public/logo/ami-tracker-symbol.png");
+                testingProduct.setPriceJpy(1225L);
+                testingProduct.setMakerName("Iwakura Enterprises");
+                testingProduct.setProductState(ProductState.IN_STOCK);
+                testingProduct.setReleaseDate(LocalDate.of(2026, 7, 18));
+                var savedProduct = productRepository.save(testingProduct);
+                log.info("Saved testing product {} via ID {}", TESTING_PRODUCT_CODE, savedProduct.getId());
+            });
+    }
+
+    /**
+     * Returns testing product entity
+     *
+     * @return ProductEntity
+     */
+    public ProductEntity getTestingProductEntity() {
+        return productRepository.findByCode(TESTING_PRODUCT_CODE)
+            .orElseThrow(() -> new IllegalStateException("Testing product does not exist!"));
+    }
 
     /**
      * Get a product by its code, or query AmiAmi if not found.
@@ -154,7 +189,10 @@ public class ProductService {
         sb.append("\n");
         sb.append("├  State: **%s**\n".formatted(product.getProductState()));
         sb.append("├  Maker: %s\n".formatted(Optional.ofNullable(product.getMakerName()).orElse("N/A")));
-        sb.append("├  Release: %s\n".formatted(Optional.ofNullable(product.getReleaseDate()).map(LocalDate::toString).orElse("N/A")));
+        sb.append("├  Release: `%s` %s\n".formatted(
+            Optional.ofNullable(product.getReleaseDate()).map(LocalDate::toString).orElse("N/A"),
+            Optional.ofNullable(product.getReleaseDate()).map(it -> "<t:%d:R>".formatted(it.atTime(12, 0).toEpochSecond(ZoneOffset.UTC))).orElse(""))
+        );
 
         if (productListQueryEntity == null) {
             sb.append("└  ");

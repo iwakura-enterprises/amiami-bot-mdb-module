@@ -60,12 +60,6 @@ public class ServerSettingsCommand extends AmiTrackerCommand {
             return;
         }
 
-        if (!member.hasPermission(Permission.MANAGE_CHANNEL)) {
-            event.reply("Only members with Manage Channels can change server-wide settings.").setEphemeral(true)
-                .queue();
-            return;
-        }
-
         var hook = event.deferReply(true).complete();
 
         userService.getOrCreateUser(user);
@@ -79,6 +73,11 @@ public class ServerSettingsCommand extends AmiTrackerCommand {
         InteractionHook hook,
         GuildEntity guildEntity
     ) {
+        if (!member.hasPermission(Permission.MANAGE_CHANNEL)) {
+            hook.editOriginal("Only members with Manage Channels can change server-wide settings.").queue();
+            return;
+        }
+
         var messageBuilder = new MessageEditBuilder().useComponentsV2();
         var interactableMessage = new InteractableMessage();
 

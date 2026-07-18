@@ -30,10 +30,8 @@ public class HelpCommand extends AmiTrackerCommand {
         var messageBuilder = new MessageCreateBuilder().useComponentsV2();
         var components = new ArrayList<ContainerChildComponent>();
 
-        components.add(TextDisplay.of("## Ami Tracker Help"));
-        components.add(Separator.createDivider(Spacing.SMALL));
-
         components.add(TextDisplay.of("### How to get notified when a product becomes available?"));
+        components.add(Separator.createDivider(Spacing.SMALL));
         components.add(TextDisplay.of(
             """
             There are two ways to get notified about product state changes:
@@ -44,6 +42,7 @@ public class HelpCommand extends AmiTrackerCommand {
         ));
 
         components.add(TextDisplay.of("### How to create product search notification?"));
+        components.add(Separator.createDivider(Spacing.SMALL));
         components.add(TextDisplay.of(
             """
             See the `/search-notification create` command or `/wizard` command.
@@ -58,8 +57,21 @@ public class HelpCommand extends AmiTrackerCommand {
             """
         ));
 
+        components.add(TextDisplay.of("### How to change the currency to USD/EUR?"));
+        components.add(Separator.createDivider(Spacing.SMALL));
+        components.add(TextDisplay.of(
+            """
+            For server-wide change, please use the `/server-settings` command. For user-specific settings, please use the `/settings` command.
+            """
+        ));
+
         components.add(TextDisplay.of("### Where can I get support / suggest new features?"));
+        components.add(Separator.createDivider(Spacing.SMALL));
         components.add(TextDisplay.of("Please, use the `/about` command or join the [support Discord server](https://discord.gg/3NnQ5Dpbux)."));
+
+        components.add(TextDisplay.of("### I have reached the maximum amount of product search notifications/wishlists. How can I increase these limits?"));
+        components.add(Separator.createDivider(Spacing.SMALL));
+        components.add(TextDisplay.of("For now, please, visit the [support Discord server](https://discord.gg/3NnQ5Dpbux) and ask there. You will get your limits increased free of charge."));
 
         var container = Container.of(components);
         messageBuilder.setComponents(container);

@@ -160,9 +160,6 @@ public class ProductChangeAnnounceService {
         );
     }
 
-    /**
-     * Finds all queued-up product announcements and sends them
-     */
     public void sendQueuedProductChangeAnnouncements() {
         var queuedProductAnnouncements = databaseService.runInThreadTransaction(session -> {
             var announcements = productChangeAnnouncementRepository.findAllQueued();
@@ -178,6 +175,13 @@ public class ProductChangeAnnounceService {
             return;
         }
 
+        sendQueuedProductChangeAnnouncements(queuedProductAnnouncements);
+    }
+
+    /**
+     * Finds all queued-up product announcements and sends them
+     */
+    public void sendQueuedProductChangeAnnouncements(List<ProductChangeAnnouncementEntity> queuedProductAnnouncements) {
         Map<MessageTarget, List<ProductChangeAnnouncementEntity>> groupedProductChangeAnnouncements = queuedProductAnnouncements.stream()
             .collect(Collectors.toMap(
                 this::createMessageTarget,
@@ -355,7 +359,11 @@ public class ProductChangeAnnounceService {
 
         builder.setTitle(product.getName());
         builder.setUrl(amiAmiApiService.createAmiAmiProductDetailUrl(product.getCode()));
-        builder.setImage(AmiTracker.AMI_AMI_IMAGE_URL.formatted(product.getImageUrl()));
+        if (product.getImageUrl().startsWith("http")) {
+            builder.setImage(product.getImageUrl());
+        } else {
+            builder.setImage(AmiTracker.AMI_AMI_IMAGE_URL.formatted(product.getImageUrl()));
+        }
         builder.setColor(product.getProductState().getColor());
 
         if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {

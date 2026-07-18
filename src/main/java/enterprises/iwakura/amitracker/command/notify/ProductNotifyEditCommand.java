@@ -1,17 +1,24 @@
 package enterprises.iwakura.amitracker.command.notify;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
+import enterprises.iwakura.amitracker.constant.ProductChangeType;
 import enterprises.iwakura.amitracker.constant.ProductState;
 import enterprises.iwakura.amitracker.database.entity.ChannelProductListQueryEntity;
+import enterprises.iwakura.amitracker.database.entity.ProductChangeAnnouncementEntity;
+import enterprises.iwakura.amitracker.database.entity.ProductEntity;
+import enterprises.iwakura.amitracker.object.ProductChangeHolder;
 import enterprises.iwakura.amitracker.object.ProductSearchParameters;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.GuildService;
+import enterprises.iwakura.amitracker.service.ProductChangeAnnounceService;
 import enterprises.iwakura.amitracker.service.ProductListService;
+import enterprises.iwakura.amitracker.service.ProductService;
 import enterprises.iwakura.amitracker.service.UserService;
 import enterprises.iwakura.cirno.StringUtils;
 import enterprises.iwakura.jdainteractables.Interaction;
@@ -53,16 +60,21 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
 
     private final UserService userService;
     private final GuildService guildService;
+    private final ProductService productService;
     private final ProductListService productListService;
+    private final ProductChangeAnnounceService productChangeAnnounceService;
 
     public ProductNotifyEditCommand(
         ConcurrencyService concurrencyService, UserService userService, GuildService guildService,
-        ProductListService productListService
+        ProductService productService,
+        ProductListService productListService, ProductChangeAnnounceService productChangeAnnounceService
     ) {
         super(concurrencyService);
         this.userService = userService;
         this.guildService = guildService;
+        this.productService = productService;
         this.productListService = productListService;
+        this.productChangeAnnounceService = productChangeAnnounceService;
         this.name = "edit";
         this.help = "Edit product search notification settings in current server";
 
@@ -429,6 +441,20 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
 
                 return Result.REMOVE;
             });
+            var sendTestNotificationButton = interactableMessage.addInteraction(Interaction.asButton(Button.secondary("abc", "Send testing notification")), event -> {
+                var buttonHook = event.deferReply(true).complete();
+                productChangeAnnounceService.sendQueuedProductChangeAnnouncements(List.of(
+                    ProductChangeAnnouncementEntity.builder()
+                        .productEntity(productService.getTestingProductEntity())
+                        .channelProductListQuery(entity)
+                        .productChangeHolder(new ProductChangeHolder())
+                        .productChangeTypes(List.of(ProductChangeType.PRODUCT_LIST_NEW_PRODUCT))
+                        .build()
+                ));
+                buttonHook.editOriginal("Testing notification was queued.").queue();
+                return Result.KEEP;
+            });
+            buttons.add(sendTestNotificationButton);
             buttons.add(deleteButton);
         }
 

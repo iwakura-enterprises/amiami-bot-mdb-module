@@ -11,7 +11,9 @@ import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.ConfigurationService;
 import enterprises.iwakura.amitracker.service.DatabaseService;
 import enterprises.iwakura.amitracker.service.ProductChangeAnnounceService;
+import enterprises.iwakura.amitracker.service.ProductService;
 import enterprises.iwakura.amitracker.service.ProxyService;
+import enterprises.iwakura.amitracker.service.SentryService;
 import enterprises.iwakura.amitracker.service.scheduler.BaseScheduler;
 import enterprises.iwakura.amitracker.service.scheduler.DiscordBaseScheduler;
 import enterprises.iwakura.amitracker.service.scheduler.ProductQueryScheduler;
@@ -38,9 +40,11 @@ public class AmiTracker extends Module {
     private final ConcurrencyService concurrencyService;
     private final ConfigurationService configurationService;
     private final DatabaseService databaseService;
+    private final ProductService productService;
     private final AmiAmiQueryService amiAmiQueryService;
     private final ProductChangeAnnounceService productChangeAnnounceService;
     private final ProxyService proxyService;
+    private final SentryService sentryService;
 
     private final List<ListenerAdapter> listeners;
 
@@ -61,8 +65,10 @@ public class AmiTracker extends Module {
         log.info("");
 
         configurationService.init(this.getModuleDirectoryPath());
+        sentryService.init();
         concurrencyService.init();
         databaseService.initialize();
+        productService.init();
         amiAmiQueryService.init();
         proxyService.init();
         productChangeAnnounceService.init();

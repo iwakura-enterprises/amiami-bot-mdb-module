@@ -27,6 +27,12 @@ public class SentryService {
         log.info("Initializing Sentry...");
 
         var config = configurationService.getSentryConfiguration();
+
+        if (config.getDsn() == null || config.getDsn().isBlank()) {
+            log.warn("Sentry is disabled!");
+            return;
+        }
+
         var sentryOptions = new SentryOptions();
         sentryOptions.setDsn(config.getDsn());
         Sentry.init(sentryOptions);

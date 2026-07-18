@@ -2,6 +2,7 @@ package enterprises.iwakura.amitracker.constant;
 
 import java.awt.Color;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 import enterprises.iwakura.kirara.amiami.response.AmiAmiItemResponse;
@@ -27,6 +28,8 @@ public enum ProductState {
 
     public static final List<ProductState> ALL = Arrays.asList(ProductState.values());
     public static final List<SelectOption> SELECT_OPTIONS = ALL.stream()
+        .sorted(Comparator.comparing(ProductState::isInStock).reversed()
+            .thenComparing(ProductState::name))
         .map(it -> SelectOption.of(it.toString(), it.name()))
         .toList();
 

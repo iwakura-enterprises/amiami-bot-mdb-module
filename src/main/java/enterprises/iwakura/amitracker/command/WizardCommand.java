@@ -6,6 +6,8 @@ import java.util.Optional;
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
 
 import enterprises.iwakura.amitracker.command.notify.ProductNotifyCreateCommand;
+import enterprises.iwakura.amitracker.command.settings.ServerSettingsCommand;
+import enterprises.iwakura.amitracker.command.settings.UserSettingsCommand;
 import enterprises.iwakura.amitracker.command.wishlist.WishlistAddCommand;
 import enterprises.iwakura.amitracker.service.ConcurrencyService;
 import enterprises.iwakura.amitracker.service.GuildService;
@@ -17,6 +19,7 @@ import enterprises.iwakura.jdainteractables.components.InteractableMessage;
 import enterprises.iwakura.sigewine.core.annotations.Bean;
 import enterprises.iwakura.sigewine.core.utils.BeanAccessor;
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
@@ -28,6 +31,7 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.unions.GuildMessageChannelUnion;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.interactions.InteractionHook;
 import net.dv8tion.jda.api.utils.messages.MessageEditBuilder;
 
@@ -46,6 +50,12 @@ public class WizardCommand extends AmiTrackerCommand {
 
     @Bean
     private final BeanAccessor<HelpCommand> helpCommand = new BeanAccessor<>(HelpCommand.class);
+
+    @Bean
+    private final BeanAccessor<ServerSettingsCommand> serverSettingsCommand = new BeanAccessor<>(ServerSettingsCommand.class);
+
+    @Bean
+    private final BeanAccessor<UserSettingsCommand> userSettingsCommand = new BeanAccessor<>(UserSettingsCommand.class);
 
     public WizardCommand(ConcurrencyService concurrencyService, UserService userService, GuildService guildService) {
         super(concurrencyService);
@@ -87,31 +97,48 @@ public class WizardCommand extends AmiTrackerCommand {
         components.add(Separator.createDivider(Spacing.SMALL));
         components.add(TextDisplay.of("This wizard message allows you to easily interact with the bot. Please, choose an action you want to take."));
 
-        var productSearchNotificationOption = interactableMessage.addInteraction(Interaction.asSelectOption("Create product search notification", "Sends a notification when product become available, etc."), e -> {
+        var productSearchNotificationOption = interactableMessage.addInteraction(Interaction.asSelectOption("Create product search notification", "Sends a notification when product become available, etc.", Emoji.fromUnicode("\uD83D\uDD14")), e -> {
             productNotifyCreateCommand.getBeanInstance().runCreate(
                 user, guild, member, channel, e, e
             );
             return Result.REMOVE;
         });
 
-        var wishlistProductOption = interactableMessage.addInteraction(Interaction.asSelectOption("Wishlist a product", "...and also will send you notifications when it becomes available, etc."), e -> {
+        var serverSettingsOption = interactableMessage.addInteraction(Interaction.asSelectOption("Server settings", "Allows you to change the preferred currency sent in notifications/product info", Emoji.fromUnicode("⚙️")), e -> {
+            serverSettingsCommand.getBeanInstance().showGuildSettings(
+                member, e.deferEdit().complete(), guildService.getOrCreateGuild(guild)
+            );
+            return Result.REMOVE;
+        });
+
+        var wishlistProductOption = interactableMessage.addInteraction(Interaction.asSelectOption("Wishlist a product", "...and also will send you notifications when it becomes available, etc.", Emoji.fromUnicode("\uD83D\uDCDD")), e -> {
             wishlistAddCommand.getBeanInstance().addUsingModal(
                 user, e
             );
             return Result.REMOVE;
         });
 
-        var helpOption = interactableMessage.addInteraction(Interaction.asSelectOption("Help", "Shows you helpful tips for using the bot"), e -> {
-            helpCommand.getBeanInstance().sendHelp(e);
+        var userSettingsOption = interactableMessage.addInteraction(Interaction.asSelectOption("User settings", "Allows you to change your preferred currency", Emoji.fromUnicode("⚙️")), e -> {
+            userSettingsCommand.getBeanInstance().showUserSettings(
+                guild, member, e.deferEdit().complete(), userService.getOrCreateUser(user)
+            );
             return Result.REMOVE;
+        });
+
+        var helpOption = interactableMessage.addInteraction(Interaction.asSelectOption("Help", "Shows you helpful tips for using the bot", Emoji.fromUnicode("\uD83C\uDD98")), e -> {
+            helpCommand.getBeanInstance().sendHelp(e);
+            return Result.KEEP;
         });
 
         var actionSelectMenuBuilder = StringSelectMenu.create("abc")
             .setPlaceholder("Action...");
         if (guild != null) {
-            actionSelectMenuBuilder.addOptions(productSearchNotificationOption);
+            if (member.hasPermission(Permission.MANAGE_CHANNEL)) {
+                actionSelectMenuBuilder.addOptions(productSearchNotificationOption);
+                actionSelectMenuBuilder.addOptions(serverSettingsOption);
+            }
         }
-        actionSelectMenuBuilder.addOptions(wishlistProductOption, helpOption);
+        actionSelectMenuBuilder.addOptions(wishlistProductOption, userSettingsOption, helpOption);
 
         components.add(ActionRow.of(actionSelectMenuBuilder.build()));
 
