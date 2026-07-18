@@ -54,7 +54,7 @@ public class AboutCommand extends AmiTrackerCommand {
                     ),
                     Button.of(
                         ButtonStyle.LINK,
-                        "https://example.com",
+                        "https://iwakura.enterprises/ami-tracker/tos.html",
                         "Terms of Service",
                         Emoji.fromUnicode("🔗")
                     )
