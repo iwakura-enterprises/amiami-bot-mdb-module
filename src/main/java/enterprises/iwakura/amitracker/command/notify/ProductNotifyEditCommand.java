@@ -30,6 +30,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.buttons.ButtonStyle;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.section.Section;
@@ -358,6 +359,42 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
 
             return Result.REMOVE;
         });
+        var stockChangeIntoPingButton = interactableMessage.addInteraction(Interaction.asButton(
+            entity.isPingStateToEnabled() ? ButtonStyle.PRIMARY : ButtonStyle.SECONDARY,
+            entity.isPingStateToEnabled() ? "Yes" : "No"
+        ), e -> {
+            var buttonHook = e.deferEdit().complete();
+            entity.setPingStateToEnabled(!entity.isPingStateToEnabled());
+            if (!create) {
+                productListService.save(entity);
+            }
+            showSettingsMenu(user, channel, buttonHook, entity, productSearchParameters, create);
+            return Result.REMOVE;
+        });
+        var stockChangeFromPingButton = interactableMessage.addInteraction(Interaction.asButton(
+            entity.isPingStateFromEnabled() ? ButtonStyle.PRIMARY : ButtonStyle.SECONDARY,
+            entity.isPingStateFromEnabled() ? "Yes" : "No"
+        ), e -> {
+            var buttonHook = e.deferEdit().complete();
+            entity.setPingStateFromEnabled(!entity.isPingStateFromEnabled());
+            if (!create) {
+                productListService.save(entity);
+            }
+            showSettingsMenu(user, channel, buttonHook, entity, productSearchParameters, create);
+            return Result.REMOVE;
+        });
+        var pingCooldownButton = interactableMessage.addInteraction(Interaction.asButton(
+            entity.isPingCooldownEnabled() ? ButtonStyle.PRIMARY : ButtonStyle.SECONDARY,
+            entity.isPingCooldownEnabled() ? "Yes" : "No"
+        ), e -> {
+            var buttonHook = e.deferEdit().complete();
+            entity.setPingCooldownEnabled(!entity.isPingCooldownEnabled());
+            if (!create) {
+                productListService.save(entity);
+            }
+            showSettingsMenu(user, channel, buttonHook, entity, productSearchParameters, create);
+            return Result.REMOVE;
+        });
 
         components.add(TextDisplay.of("**Search Parameters**"));
         components.add(TextDisplay.of("```\n%s\n```".formatted(
@@ -384,6 +421,10 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
             """
         ));
         components.add(ActionRow.of(stateToSelectMenu));
+        components.add(Section.of(
+            stockChangeIntoPingButton,
+            TextDisplay.of("Should notifications caused by **stock change into** ping roles?")
+        ));
 
         components.add(TextDisplay.of("**Stock state change from**"));
         components.add(TextDisplay.of(
@@ -394,10 +435,18 @@ public class ProductNotifyEditCommand extends ProductNotifySubCommand {
             """
         ));
         components.add(ActionRow.of(stateFromSelectMenu));
+        components.add(Section.of(
+            stockChangeFromPingButton,
+            TextDisplay.of("Should notifications caused by **stock change from** ping roles?")
+        ));
 
         components.add(TextDisplay.of("**Roles to ping**"));
         components.add(TextDisplay.of("Pings the specified roles when a notification is triggered.\nRole pings will be suppressed for notifications in a short span of time to prevent ping spamming."));
         components.add(ActionRow.of(roleSelectMenu));
+        components.add(Section.of(
+            pingCooldownButton,
+            TextDisplay.of("Should pings have a cooldown for a week when same product change occurs? Keep in mind, same-roles pings for different product have independent cooldown of this setting.")
+        ));
 
         // Buttons
         var buttons = new ArrayList<Button>();

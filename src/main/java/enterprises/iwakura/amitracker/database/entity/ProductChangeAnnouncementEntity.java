@@ -72,4 +72,17 @@ public class ProductChangeAnnouncementEntity {
     @ToString.Exclude
     @JdbcTypeCode(SqlTypes.JSON)
     private ProductChangeHolder productChangeHolder;
+
+    /**
+     * Appends message to the send log, separating messages with new lines
+     *
+     * @param message Message
+     */
+    public void appendToSendLog(String message) {
+        if (sendLog == null) {
+            sendLog = message;
+        } else {
+            sendLog += "\n" + message;
+        }
+    }
 }

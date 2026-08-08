@@ -15,18 +15,20 @@ public class MessageTarget {
     private long targetId;
     private long guildId;
     private Set<Long> rolesToPing;
+    private boolean pingsCleared;
 
     public MessageTarget(long userId) {
         this.isUser = true;
         this.targetId = userId;
     }
 
-    public MessageTarget(long channelId, GuildEntity guild, Set<Long> rolesToPing) {
+    public MessageTarget(long channelId, GuildEntity guild, Set<Long> rolesToPing, boolean pingsCleared) {
         this.isUser = false;
         this.targetId = channelId;
         this.guild = guild;
         this.guildId = guild.getId();
         this.rolesToPing = rolesToPing;
+        this.pingsCleared = pingsCleared;
     }
 
     public boolean isForGuild() {

@@ -60,6 +60,15 @@ public class ChannelProductListQueryEntity {
     @Column(nullable = false)
     private boolean newProductsEnabled = true;
 
+    @Column(nullable = false)
+    private boolean pingStateToEnabled = true;
+
+    @Column(nullable = false)
+    private boolean pingStateFromEnabled = true;
+
+    @Column(nullable = false)
+    private boolean pingCooldownEnabled = false;
+
     @Column(nullable = false, columnDefinition = "bigint[]")
     private Set<Long> roleIdsToNotify = new HashSet<>();
 

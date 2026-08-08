@@ -15,8 +15,11 @@ import enterprises.iwakura.sigewine.core.annotations.Bean;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.events.channel.update.ChannelUpdateNameEvent;
+import net.dv8tion.jda.api.events.guild.GuildJoinEvent;
+import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.guild.update.GuildUpdateNameEvent;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.events.user.GenericUserEvent;
 import net.dv8tion.jda.api.events.user.update.UserUpdateGlobalNameEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
@@ -36,6 +39,15 @@ public class DiscordListener extends ListenerAdapter {
     private final ConcurrencyService concurrencyService;
 
     private final ProductCommand productCommand;
+
+    @Override
+    public void onGuildJoin(GuildJoinEvent event) {
+        var guild = event.getGuild();
+        log.info("Guild join {} ({})",
+            guild.getIdLong(), guild.getName()
+        );
+        guildRepository.getOrCreate(guild.getIdLong(), guild.getName());
+    }
 
     @Override
     public void onGuildUpdateName(GuildUpdateNameEvent event) {

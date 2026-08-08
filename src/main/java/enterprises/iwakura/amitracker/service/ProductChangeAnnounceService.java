@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import com.google.common.cache.Cache;
@@ -23,7 +24,6 @@ import enterprises.iwakura.amitracker.database.entity.GuildEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductChangeAnnouncementEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
-import enterprises.iwakura.amitracker.database.entity.UserEntity;
 import enterprises.iwakura.amitracker.database.repository.ChannelListProductQueryRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductChangeAnnouncementRepository;
 import enterprises.iwakura.amitracker.database.repository.WishlistRepository;
@@ -184,7 +184,14 @@ public class ProductChangeAnnounceService {
     public void sendQueuedProductChangeAnnouncements(List<ProductChangeAnnouncementEntity> queuedProductAnnouncements) {
         Map<MessageTarget, List<ProductChangeAnnouncementEntity>> groupedProductChangeAnnouncements = queuedProductAnnouncements.stream()
             .collect(Collectors.toMap(
-                this::createMessageTarget,
+                it -> createMessageTarget(
+                    it,
+                    // Any same-product announcements that could be caused when two product list queries overlap
+                    // each other
+                    queuedProductAnnouncements.stream()
+                        .filter(otherIt -> it.getProductEntity().getId().equals(otherIt.getProductEntity().getId()))
+                        .toList()
+                ),
                 item -> new ArrayList<>(List.of(item)),
                 (v1, v2) -> {
                     v1.addAll(v2);
@@ -203,7 +210,7 @@ public class ProductChangeAnnounceService {
 
             // Embeds per product, multiple ProductChangeAnnouncementEntities get merged into one embed
             Map<ProductEntity, EmbedBuilder> embedByProduct = groupedProducts.entrySet().stream()
-                .collect(Collectors.toMap(Entry::getKey, v -> createEmbed(target.getGuild(), v.getKey(), v.getValue())));
+                .collect(Collectors.toMap(Entry::getKey, v -> createEmbed(target, v.getKey(), v.getValue())));
 
             // Messages that will be sent out with the corresponding product change announcement entities
             Map<MessageCreateData, List<ProductChangeAnnouncementEntity>> messagesToSend = new HashMap<>();
@@ -274,6 +281,7 @@ public class ProductChangeAnnounceService {
                 PrivateChannel privateChannel;
 
                 try {
+                    // TODO: Async
                     privateChannel = shardManager.get().retrieveUserById(target.getTargetId())
                         .complete()
                         .openPrivateChannel()
@@ -318,16 +326,6 @@ public class ProductChangeAnnounceService {
                     .collect(Collectors.joining(" ")));
             }
 
-            if (!suppressedRoles.isEmpty()) {
-                if (!sb.isEmpty()) {
-                    sb.append("\n");
-                }
-                sb.append("Suppressed role pings: ");
-                sb.append(suppressedRoles.stream()
-                    .map(role -> "`%s`".formatted(role.getName()))
-                    .collect(Collectors.joining(", ")));
-            }
-
             if (!sb.isEmpty()) {
                 currentMessageBuilder.setContent(sb.toString());
             }
@@ -337,16 +335,19 @@ public class ProductChangeAnnounceService {
     /**
      * Creates embed for product and its changes
      *
+     * @param messageTarget Message target
      * @param product       Product
      * @param announcements announcement changes
      *
      * @return Embed builder
      */
     private EmbedBuilder createEmbed(
-        GuildEntity guildEntity,
+        MessageTarget messageTarget,
         ProductEntity product,
         List<ProductChangeAnnouncementEntity> announcements
     ) {
+        String footer = null;
+        var guildEntity = messageTarget.getGuild();
         var productListQuery = announcements.stream()
             .map(ProductChangeAnnouncementEntity::getChannelProductListQuery)
             .findAny()
@@ -367,7 +368,7 @@ public class ProductChangeAnnounceService {
         builder.setColor(product.getProductState().getColor());
 
         if (product.getImageUrl().equalsIgnoreCase(AmiAmiApiService.NO_IMAGE_URL)) {
-            builder.setFooter("Once the image is available, you will be notified.");
+            footer = "Once the image is available, you will be notified";
         }
 
         if (!announcements.isEmpty()) {
@@ -404,6 +405,18 @@ public class ProductChangeAnnounceService {
         }
 
         builder.setDescription(descriptionSb);
+
+        if (messageTarget.isPingsCleared()) {
+            if (footer != null) {
+                footer += " (suppressed some role pings)";
+            } else {
+                footer = "Some role pings were suppressed";
+            }
+        }
+        if (footer != null) {
+            builder.setFooter(footer);
+        }
+
         return builder;
     }
 
@@ -459,7 +472,7 @@ public class ProductChangeAnnounceService {
             databaseService.runInThreadTransaction(session -> {
                 messageAnnouncements.forEach(entity -> {
                     entity.setAnnouncementState(QueueState.COMPLETED);
-                    entity.setSendLog("Sent via message %d".formatted(message.getIdLong()));
+                    entity.appendToSendLog("Sent via message %d".formatted(message.getIdLong()));
                     productChangeAnnouncementRepository.save(entity);
                 });
             });
@@ -485,7 +498,7 @@ public class ProductChangeAnnounceService {
             databaseService.runInThreadTransaction(session -> {
                 messageAnnouncements.forEach(entity -> {
                     entity.setAnnouncementState(QueueState.FAILED);
-                    entity.setSendLog("Failed due to error\n%s".formatted(ExceptionUtils.dumpExceptionStacktrace(failure)));
+                    entity.appendToSendLog("Failed due to error\n%s".formatted(ExceptionUtils.dumpExceptionStacktrace(failure)));
                     productChangeAnnouncementRepository.save(entity);
                 });
             });
@@ -500,25 +513,71 @@ public class ProductChangeAnnounceService {
      * ping correct roles.</br>
      * e.g., one channel that have 2 different product change announcements but ping the same roles will be grouped
      * together
-     * be sent as one message.
      *
      * @param entity ProductChangeAnnouncementEntity
+     * @param otherSameProductChangeAnnouncements list of other same-product change announcements that are being sent
      *
      * @return Identifier
      */
-    private MessageTarget createMessageTarget(ProductChangeAnnouncementEntity entity) {
+    private MessageTarget createMessageTarget(
+        ProductChangeAnnouncementEntity entity,
+        List<ProductChangeAnnouncementEntity> otherSameProductChangeAnnouncements
+    ) {
         if (entity.getWishlist() != null) {
             return new MessageTarget(entity.getWishlist().getUser().getId());
         } else if (entity.getChannelProductListQuery() != null) {
             var productListQuery = entity.getChannelProductListQuery();
+            var pingsCleared = new AtomicBoolean(false);
             var rolesToPing = new HashSet<>(productListQuery.getRoleIdsToNotify());
 
             // If only image URL change, don't ping any roles
             if (entity.getProductChangeTypes().contains(ProductChangeType.IMAGE_URL_CHANGE) && entity.getProductChangeTypes().size() == 1) {
+                entity.appendToSendLog("Clearing pings (IMAGE_URL_CHANGE)");
                 rolesToPing.clear();
+                pingsCleared.set(true);
+
             }
 
-            return new MessageTarget(productListQuery.getChannel().getId(), productListQuery.getChannel().getGuild(), rolesToPing);
+            if (entity.getProductChangeTypes().contains(ProductChangeType.PRODUCT_STATE_CHANGED)) {
+                var changeHolder = entity.getProductChangeHolder();
+
+                // Product state changed into enabled state-to and ping state-to is disabled
+                if (productListQuery.getStateToEnabled().contains(changeHolder.getNewProductState())
+                    && !productListQuery.isPingStateToEnabled()
+                ) {
+                    entity.appendToSendLog("Clearing pings (pingStateToEnabled == false)");
+                    rolesToPing.clear();
+                    pingsCleared.set(true);
+                }
+
+                // Same but in reverse
+                if (productListQuery.getStateFromEnabled().contains(changeHolder.getOldProductState())
+                    && !productListQuery.isPingStateFromEnabled()
+                ) {
+                    entity.appendToSendLog("Clearing pings (pingStateFromEnabled == false)");
+                    rolesToPing.clear();
+                    pingsCleared.set(true);
+                }
+            }
+
+            // If product announcement occurred recently and cooldown is enabled, also clear roles
+            if (productListQuery.isPingCooldownEnabled()) {
+                var queryConfig = configurationService.getProductQuery();
+                productChangeAnnouncementRepository.findLastPrevious(entity, otherSameProductChangeAnnouncements)
+                    .ifPresent(last -> {
+                        // If the difference between current and last is smaller than the cooldown, prevent ping
+                        var currentMillis = entity.getCreatedAt().toInstant().toEpochMilli();
+                        var lastMillis = last.getCreatedAt().toInstant().toEpochMilli();
+                        var difference = currentMillis - lastMillis;
+                        if (difference < queryConfig.getPingCooldownDuration()) {
+                            entity.appendToSendLog("Clearing pings (pingCooldownEnabled == true && last sent in %s diff of %s ms)".formatted(last.getCreatedAt(), difference));
+                            rolesToPing.clear();
+                            pingsCleared.set(true);
+                        }
+                    });
+            }
+
+            return new MessageTarget(productListQuery.getChannel().getId(), productListQuery.getChannel().getGuild(), rolesToPing, pingsCleared.get());
         } else {
             return null;
         }

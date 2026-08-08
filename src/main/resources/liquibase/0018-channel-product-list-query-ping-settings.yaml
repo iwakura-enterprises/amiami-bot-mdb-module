@@ -1,0 +1,27 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0018-channel-product-list-query-ping-settings-1
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: channel_product_list_query
+            columns:
+              - column:
+                  name: pingStateToEnabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pingStateFromEnabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pingCooldownEnabled
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

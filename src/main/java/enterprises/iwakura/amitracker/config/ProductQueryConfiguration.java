@@ -1,5 +1,7 @@
 package enterprises.iwakura.amitracker.config;
 
+import java.time.Duration;
+
 import lombok.Data;
 
 @Data
@@ -14,4 +16,6 @@ public class ProductQueryConfiguration {
 
     private int noImageMaxRetryCount = 7;
     private long noImageRefreshBackOffBase = 300000; // 5 minutes
+
+    private long pingCooldownDuration = Duration.ofDays(7).toMillis();
 }
