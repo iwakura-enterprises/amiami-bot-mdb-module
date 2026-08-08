@@ -74,7 +74,7 @@ public class ChannelRepository extends AmiBaseRepository<ChannelEntity, Long> {
                 SET ch.name = :channelName
                 WHERE ch.id = :channelId
                 """;
-            session.createQuery(hql, Object.class)
+            session.createQuery(hql, null)
                 .setParameter("channelId", channelId)
                 .setParameter("channelName", channelName)
                 .executeUpdate();

@@ -62,7 +62,7 @@ public class GuildRepository extends AmiBaseRepository<GuildEntity, Long> {
                 SET g.name = :guildName
                 WHERE g.id = :guildId
                 """;
-            session.createQuery(hql, Object.class)
+            session.createQuery(hql, null)
                 .setParameter("guildId", guildId)
                 .setParameter("guildName", guildName)
                 .executeUpdate();
