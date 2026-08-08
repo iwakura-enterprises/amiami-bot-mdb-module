@@ -53,3 +53,6 @@ databaseChangeLog:
   - include:
       file: 0018-channel-product-list-query-ping-settings.yaml
       relativeToChangelogFile: true
+  - include:
+      file: 0019-proxy-dead-in-row.yaml
+      relativeToChangelogFile: true

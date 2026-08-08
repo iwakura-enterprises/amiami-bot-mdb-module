@@ -34,4 +34,9 @@ public class ProxyConfiguration {
      */
     private int probeThreads = 20;
 
+    /**
+     * Maximum number of times in dead in a row before resetting to NOT_READY or USED_UP
+     */
+    private int maxTimesDeadInRow = 10;
+
 }

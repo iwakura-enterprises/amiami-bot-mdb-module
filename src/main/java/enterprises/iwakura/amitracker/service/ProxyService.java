@@ -229,6 +229,8 @@ public class ProxyService {
      * @return Proxy state
      */
     private ProxyState probeProxy(ProxyEntity proxy) {
+        var proxyConfig = configurationService.getProxyConfiguration();
+
         try {
             var api = new AmiAmiApi(
                 DEFAULT_API_URL,
@@ -270,8 +272,9 @@ public class ProxyService {
         }
 
         // Tried at least 10 times
-        if (proxy.getReliabilityRatio() <= configurationService.getProxyConfiguration().getUsedUpReliabilityRatio()
-            && proxy.getTimesDead() > 10
+        if ((proxy.getReliabilityRatio() <= proxyConfig.getUsedUpReliabilityRatio() && proxy.getTimesDead() > 10)
+            // Or dead n times in a row
+            || proxy.getTimesDeadInRow() >= proxyConfig.getMaxTimesDeadInRow()
         ) {
             log.info("Proxy {} has been used up", proxy.getId());
             proxy.setState(ProxyState.USED_UP);
@@ -288,9 +291,15 @@ public class ProxyService {
      * @param proxies Proxies
      */
     public void scheduleUpdateProxies(List<ProxyDTO> proxies) {
+        var proxyConfig = configurationService.getProxyConfiguration();
+
         concurrencyService.scheduleProxy(() -> {
             databaseService.runInThreadTransaction(session -> {
                 for (ProxyDTO proxy : proxies) {
+                    if (proxy.getTimesDeadInRow() >= proxyConfig.getMaxTimesDeadInRow()) {
+                        proxy.setState(ProxyState.NOT_READY);
+                    }
+
                     proxyRepository.findById(proxy.getId())
                         .map(entity -> proxyMapper.update(entity, proxy))
                         .ifPresent(proxyRepository::save);

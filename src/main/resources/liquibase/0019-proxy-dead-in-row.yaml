@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0019-proxy-dead-in-row
+      author: mayuna
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: proxy
+            columns:
+              - column:
+                  name: timesDeadInRow
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

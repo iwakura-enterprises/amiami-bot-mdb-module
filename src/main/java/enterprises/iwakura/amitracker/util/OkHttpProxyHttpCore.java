@@ -6,6 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
+import enterprises.iwakura.amitracker.constant.ProxyState;
 import enterprises.iwakura.amitracker.object.ProxyDTO;
 import enterprises.iwakura.amitracker.service.ConfigurationService;
 import enterprises.iwakura.amitracker.service.ProxyService;

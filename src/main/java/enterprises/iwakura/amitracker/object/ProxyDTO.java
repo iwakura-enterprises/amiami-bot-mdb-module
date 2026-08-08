@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 
 import enterprises.iwakura.amitracker.constant.AnonymityLevel;
+import enterprises.iwakura.amitracker.constant.ProxyState;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,10 +23,12 @@ public class ProxyDTO {
     private Proxy.Type protocol;
     private String ip;
     private int port;
+    private ProxyState state;
 
     private Integer latencyMillis;
     private Integer timesAlive;
     private Integer timesDead;
+    private Integer timesDeadInRow;
     private String countyCode;
     private AnonymityLevel anonymityLevel;
 
@@ -45,6 +48,7 @@ public class ProxyDTO {
             timesAlive = 0;
         }
         timesAlive++;
+        timesDeadInRow = 0;
     }
 
     public void addTimesDead() {
@@ -52,6 +56,7 @@ public class ProxyDTO {
             timesDead = 0;
         }
         timesDead++;
+        timesDeadInRow++;
     }
 
     public void updateLatency(int latencyMillis) {

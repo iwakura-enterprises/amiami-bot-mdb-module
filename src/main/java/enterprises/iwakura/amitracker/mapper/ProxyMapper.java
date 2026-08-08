@@ -23,7 +23,6 @@ public interface ProxyMapper {
     @Mapping(target = "protocol", ignore = true)
     @Mapping(target = "ip", ignore = true)
     @Mapping(target = "port", ignore = true)
-    @Mapping(target = "state", ignore = true)
     @Mapping(target = "score", ignore = true)
     @Mapping(target = "lastUsedAt", ignore = true)
     ProxyEntity update(@MappingTarget ProxyEntity entity, ProxyDTO dto);
