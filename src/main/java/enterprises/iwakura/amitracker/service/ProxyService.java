@@ -9,6 +9,7 @@ import java.net.Proxy.Type;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -80,9 +81,11 @@ public class ProxyService {
 
     private final ProxyMapper proxyMapper;
 
-    private final List<BaseProxyFetcher> proxyFetchers;
+    private final List<BaseProxyFetcher> proxyFetchers; // Sigewine-injected
+    private final List<BaseProxyFetcher> allProxyFetchers = new ArrayList<>();
 
     private GsonSerializer gsonSerializer;
+    private OkHttpClient probeHttpClient;
 
     /**
      * Initializes ProxyService
@@ -91,19 +94,27 @@ public class ProxyService {
         log.info("Initializing ProxyService...");
 
         gsonSerializer = new GsonSerializer(gson, SUPPORTED_CONTENT_TYPES);
-        proxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/http.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/https.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/socks4.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/socks5.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/HTTPS_RAW.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/SOCKS4_RAW.txt"));
-        proxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/SOCKS5_RAW.txt"));
+        probeHttpClient = new OkHttpClient.Builder()
+            .protocols(List.of(Protocol.HTTP_1_1))
+            .connectTimeout(Duration.of(CONNECT_TIMEOUT_SECONDS, ChronoUnit.SECONDS))
+            .readTimeout(Duration.of(READ_TIMEOUT_SECONDS, ChronoUnit.SECONDS))
+            .build();
 
-        log.info("There are {} proxy fetchers", proxyFetchers.size());
+        allProxyFetchers.clear();
+        allProxyFetchers.addAll(proxyFetchers);
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/http.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/https.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/socks4.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/zloi-user/hideip.me/refs/heads/main/socks5.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.HTTP, "https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/HTTPS_RAW.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/SOCKS4_RAW.txt"));
+        allProxyFetchers.add(new SimpleProxyFetcher(Type.SOCKS, "https://raw.githubusercontent.com/roosterkid/openproxylist/refs/heads/main/SOCKS5_RAW.txt"));
+
+        log.info("There are {} proxy fetchers", allProxyFetchers.size());
     }
 
     /**
@@ -130,7 +141,7 @@ public class ProxyService {
             return;
         }
 
-        proxyFetchers.stream()
+        allProxyFetchers.stream()
             .map(fetcher -> Map.entry(fetcher, concurrencyService.scheduleProxy(fetcher::fetch)))
             .forEach(it -> it.getValue().whenCompleteAsync(CompletableFutureUtils.$safe((fetchedProxies, exception) -> {
                 if (exception != null) {
@@ -226,11 +237,7 @@ public class ProxyService {
                 new OkHttpProxyHttpCore(
                     configurationService,
                     this,
-                    new OkHttpClient.Builder()
-                        .protocols(List.of(Protocol.HTTP_1_1))
-                        .connectTimeout(Duration.of(CONNECT_TIMEOUT_SECONDS, ChronoUnit.SECONDS))
-                        .readTimeout(Duration.of(READ_TIMEOUT_SECONDS, ChronoUnit.SECONDS))
-                        .build(),
+                    probeHttpClient,
                     proxyMapper.toDTO(proxy)
                 ),
                 gsonSerializer

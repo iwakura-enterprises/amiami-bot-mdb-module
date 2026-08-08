@@ -161,8 +161,9 @@ public class ProductChangeAnnounceService {
     }
 
     public void sendQueuedProductChangeAnnouncements() {
+        var config = configurationService.getProductChangeAnnouncementConfiguration();
         var queuedProductAnnouncements = databaseService.runInThreadTransaction(session -> {
-            var announcements = productChangeAnnouncementRepository.findAllQueued();
+            var announcements = productChangeAnnouncementRepository.findAllQueued(config.getMaxAnnouncementsPerSend());
             announcements.forEach(entity -> {
                 entity.setAnnouncementState(QueueState.PROCESSING);
                 productChangeAnnouncementRepository.save(entity);
@@ -182,22 +183,25 @@ public class ProductChangeAnnounceService {
      * Finds all queued-up product announcements and sends them
      */
     public void sendQueuedProductChangeAnnouncements(List<ProductChangeAnnouncementEntity> queuedProductAnnouncements) {
-        Map<MessageTarget, List<ProductChangeAnnouncementEntity>> groupedProductChangeAnnouncements = queuedProductAnnouncements.stream()
-            .collect(Collectors.toMap(
-                it -> createMessageTarget(
-                    it,
-                    // Any same-product announcements that could be caused when two product list queries overlap
-                    // each other
-                    queuedProductAnnouncements.stream()
-                        .filter(otherIt -> it.getProductEntity().getId().equals(otherIt.getProductEntity().getId()))
-                        .toList()
-                ),
-                item -> new ArrayList<>(List.of(item)),
-                (v1, v2) -> {
-                    v1.addAll(v2);
-                    return v1;
-                }
-            ));
+        // Any same-product announcements that could be caused when two product list queries overlap each other
+        Map<Long, List<ProductChangeAnnouncementEntity>> announcementsByProductId = queuedProductAnnouncements.stream()
+            .collect(Collectors.groupingBy(it -> it.getProductEntity().getId()));
+        Map<MessageTarget, List<ProductChangeAnnouncementEntity>> groupedProductChangeAnnouncements = new HashMap<>();
+        for (var announcement : queuedProductAnnouncements) {
+            var messageTarget = createMessageTarget(
+                announcement,
+                announcementsByProductId.get(announcement.getProductEntity().getId())
+            );
+
+            if (messageTarget == null) {
+                log.warn("Could not resolve message target for product change announcement {}, skipping it",
+                    announcement.getId()
+                );
+                continue;
+            }
+
+            groupedProductChangeAnnouncements.computeIfAbsent(messageTarget, key -> new ArrayList<>()).add(announcement);
+        }
 
         log.info("Found {} message targets for product change announcements (total of {} queued announcements)",
             groupedProductChangeAnnouncements.size(), queuedProductAnnouncements.size()

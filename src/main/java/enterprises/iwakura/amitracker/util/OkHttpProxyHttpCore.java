@@ -162,7 +162,7 @@ public class OkHttpProxyHttpCore extends HttpCore {
                     future.completeExceptionally(finalException);
                 }
 
-                if (proxyOverride == null) {
+                if (proxyOverride == null && !triedProxies.isEmpty()) {
                     try {
                         proxyService.scheduleUpdateProxies(triedProxies);
                     } catch (Exception exception) {

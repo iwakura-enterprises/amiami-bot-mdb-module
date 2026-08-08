@@ -36,16 +36,20 @@ public class ProductChangeAnnouncementRepository extends AmiBaseRepository<Produ
     /**
      * Finds queued ProductChangeAnnouncementEntities
      *
+     * @param maxResults the maximum number of announcements to return, oldest first
+     *
      * @return ProductChangeAnnouncementEntities
      */
-    public List<ProductChangeAnnouncementEntity> findAllQueued() {
+    public List<ProductChangeAnnouncementEntity> findAllQueued(int maxResults) {
         return databaseService.runInThreadTransaction(session -> {
             var hql = """
                       FROM ProductChangeAnnouncementEntity
                       WHERE announcementState = :state AND (wishlist IS NOT NULL OR channelProductListQuery IS NOT NULL)
+                      ORDER BY createdAt ASC
                       """;
             return session.createQuery(hql, ProductChangeAnnouncementEntity.class)
                 .setParameter("state", QueueState.QUEUED)
+                .setMaxResults(maxResults)
                 .getResultList();
         });
     }

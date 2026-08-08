@@ -38,18 +38,21 @@ public class WishlistEntryRepository extends AmiBaseRepository<WishlistEntryEnti
      * Finds all pending wishlist entries whose associated products have not been updated within the specified interval.
      *
      * @param intervalMillis the interval in milliseconds
+     * @param maxResults     the maximum number of entries to return, oldest first
      *
      * @return a list of pending wishlist entries
      */
-    public List<WishlistEntryEntity> findAllPending(long intervalMillis) {
+    public List<WishlistEntryEntity> findAllPending(long intervalMillis, int maxResults) {
         return databaseService.runInThreadTransaction(session -> {
             var hql =
                 """
                 FROM WishlistEntryEntity we
                 WHERE we.product.updatedAt IS NULL OR we.product.updatedAt <= :thresholdTime
+                ORDER BY we.product.updatedAt ASC NULLS FIRST
                 """;
             var query = session.createQuery(hql, WishlistEntryEntity.class);
             query.setParameter("thresholdTime", OffsetDateTime.now().minus(intervalMillis, ChronoUnit.MILLIS));
+            query.setMaxResults(maxResults);
             return query.list();
         });
     }

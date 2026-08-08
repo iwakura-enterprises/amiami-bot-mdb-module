@@ -83,7 +83,7 @@ public class DiscordListener extends ListenerAdapter {
             log.info("User {} specified AmiAmi product code {} in their message, fetching and responding with product info...",
                 user.getIdLong(), productCode
             );
-            channel.sendTyping().complete();
+            channel.sendTyping().queue();
 
             concurrencyService.scheduleThrottled(channel.getId(), () -> {
                 productService.getOrQueryProduct(productCode).ifPresent(e -> {

@@ -6,4 +6,5 @@ import lombok.Data;
 public class ProductChangeAnnouncementConfiguration {
 
     private long recentRolePingBackoff = 2 * 60 * 1000; // 2 minutes
+    private int maxAnnouncementsPerSend = 250;
 }

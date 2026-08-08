@@ -29,7 +29,6 @@ public class AmiAmiQueryService {
     private final AmiAmiApiService amiAmiApiService;
 
     private Cache<String, AmiAmiItemResponse> itemResponseCache;
-    private Cache<Long, AmiAmiSearchResponse> itemSearchResponseCache;
     private Executor executor;
     private long lastQueryTimeMillis = 0L;
 
@@ -48,12 +47,6 @@ public class AmiAmiQueryService {
             .expireAfterWrite((long) (productQueryConfiguration.getItemDetailQueryIntervalMillis() * 0.9), TimeUnit.MILLISECONDS)
             .recordStats()
             .build();
-
-        itemSearchResponseCache = CacheBuilder.newBuilder()
-            .maximumSize(cacheConfiguration.getMaxProductListCacheSize())
-            .expireAfterWrite((long) (productQueryConfiguration.getSearchQueryIntervalMillis() * 0.9), TimeUnit.MILLISECONDS)
-            .recordStats()
-            .build();
     }
 
     /**
@@ -67,22 +60,14 @@ public class AmiAmiQueryService {
         var future = new CompletableFuture<AmiAmiSearchResponse>();
 
         executor.execute(() -> {
-            // Check if recently queried
-            var recentResponse = itemSearchResponseCache.getIfPresent(queryRequest.getProductListQueryId());
-            if (recentResponse != null) {
-                log.warn("ProductListQueryEntity {} found in recently queried cache, skipping query",
-                    queryRequest.getProductListQueryId());
-                future.complete(recentResponse);
-            } else {
-                try {
-                    var response = performQuery(() -> amiAmiApiService.search(queryRequest.getAmiAmiSearchRequest()).send().join());
-                    future.complete(response);
-                } catch (Exception exception) {
-                    future.completeExceptionally(
-                        new QueryFailedException("Failed to query search for ProductListQueryEntity[%d]".formatted(
-                            queryRequest.getProductListQueryId()), exception)
-                    );
-                }
+            try {
+                var response = performQuery(() -> amiAmiApiService.search(queryRequest.getAmiAmiSearchRequest()).send().join());
+                future.complete(response);
+            } catch (Exception exception) {
+                future.completeExceptionally(
+                    new QueryFailedException("Failed to query search for ProductListQueryEntity[%d]".formatted(
+                        queryRequest.getProductListQueryId()), exception)
+                );
             }
         });
 

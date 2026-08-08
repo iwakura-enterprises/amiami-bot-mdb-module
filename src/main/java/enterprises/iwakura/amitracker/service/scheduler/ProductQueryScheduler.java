@@ -9,9 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import enterprises.iwakura.amitracker.constant.QueueState;
-import enterprises.iwakura.amitracker.database.entity.ProductEntity;
 import enterprises.iwakura.amitracker.database.entity.ProductListQueryEntity;
-import enterprises.iwakura.amitracker.database.entity.WishlistEntryEntity;
 import enterprises.iwakura.amitracker.database.repository.ProductImageRefreshRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductListQueryRepository;
 import enterprises.iwakura.amitracker.database.repository.ProductRepository;
@@ -73,7 +71,9 @@ public class ProductQueryScheduler extends BaseScheduler {
                     query.setLastQueryAt(OffsetDateTime.now());
                     productListQueryRepository.save(query);
                 });
-                pendingQueries.forEach(query -> concurrencyService.scheduleQuery(() -> runProductQuery(query)));
+                pendingQueries.stream()
+                    .map(ProductListQueryEntity::getId)
+                    .forEach(this::scheduleProductListQuery);
             }
         });
     }
@@ -84,12 +84,18 @@ public class ProductQueryScheduler extends BaseScheduler {
     private void processWishlistProducts() {
         var productQueryConfig = configurationService.getProductQuery();
         databaseService.runInThreadTransaction(session -> {
-            var pendingWishlistEntries = wishlistEntryRepository.findAllPending(productQueryConfig.getItemDetailQueryIntervalMillis());
+            var pendingWishlistEntries = wishlistEntryRepository.findAllPending(
+                productQueryConfig.getItemDetailQueryIntervalMillis(),
+                productQueryConfig.getMaxWishlistEntriesPerQuery()
+            );
 
             if (!pendingWishlistEntries.isEmpty()) {
                 var ids = pendingWishlistEntries.stream().map(e -> e.getId().toString()).reduce((a, b) -> a + ", " + b).orElse("");
                 log.debug("Found {} pending wishlist entries to process: {}", pendingWishlistEntries.size(), ids);
-                pendingWishlistEntries.forEach(entry -> concurrencyService.scheduleQuery(() -> runProductQuery(entry.getProduct().getCode())));
+                pendingWishlistEntries.stream()
+                    .map(entry -> entry.getProduct().getCode())
+                    .distinct()
+                    .forEach(this::scheduleProductCodeQuery);
             }
         });
     }
@@ -177,23 +183,46 @@ public class ProductQueryScheduler extends BaseScheduler {
     }
 
     /**
-     * Schedules a ProductListQueryEntity for processing if it is not already scheduled.
+     * Schedules a ProductListQueryEntity for background processing if it is not already claimed.
      *
-     * @param productListQueryEntity the ProductListQueryEntity to schedule
+     * @param productListQueryId the ProductListQueryEntity ID to schedule
      */
-    public void runProductQuery(ProductListQueryEntity productListQueryEntity) {
-        synchronized (scheduledProductListQueryIds) {
-            if (scheduledProductListQueryIds.contains(productListQueryEntity.getId())) {
-                log.debug("ProductListQueryEntity with ID {} is already scheduled. Skipping.",
-                    productListQueryEntity.getId()
+    private void scheduleProductListQuery(Long productListQueryId) {
+        if (!claimProductListQueryId(productListQueryId)) {
+            log.debug("ProductListQueryEntity with ID {} is already scheduled. Skipping.", productListQueryId);
+            return;
+        }
+
+        log.debug("Scheduled ProductListQueryEntity with ID {} for processing.", productListQueryId);
+        concurrencyService.scheduleQuery(() -> runClaimedProductQuery(productListQueryId));
+    }
+
+    /**
+     * Processes a ProductListQueryEntity if it is not already scheduled.
+     *
+     * @param productListQueryId the ProductListQueryEntity ID to process
+     */
+    public void runProductQuery(Long productListQueryId) {
+        if (!claimProductListQueryId(productListQueryId)) {
+            log.debug("ProductListQueryEntity with ID {} is already scheduled. Skipping.", productListQueryId);
+            return;
+        }
+
+        runClaimedProductQuery(productListQueryId);
+    }
+
+    private void runClaimedProductQuery(Long productListQueryId) {
+        try {
+            var optionalProductListQuery = productListQueryRepository.findById(productListQueryId);
+
+            if (optionalProductListQuery.isEmpty()) {
+                log.warn("After scheduling and before processing, the ProductListQueryEntity with ID {} was not found. It may have been deleted.",
+                    productListQueryId
                 );
                 return;
             }
-            scheduledProductListQueryIds.add(productListQueryEntity.getId());
-            log.debug("Scheduled ProductListQueryEntity with ID {} for processing.", productListQueryEntity.getId());
-        }
 
-        try {
+            var productListQueryEntity = optionalProductListQuery.get();
             List<AmiAmiSearchResponse> pageResponses = new ArrayList<>();
             var firstPage = amiAmiQueryService.scheduleSearch(new ProductListQueryRequest(
                 productListQueryEntity.getId(), productListQueryEntity.toAmiAmiSearchRequest(1))
@@ -255,37 +284,49 @@ public class ProductQueryScheduler extends BaseScheduler {
             productProcessorService.process(productListQueryEntity, pageResponses);
         } catch (MissingEntityException exception) {
             log.warn("After scheduling and before processing, the ProductListQueryEntity with ID {} was not found. It may have been deleted.",
-                productListQueryEntity.getId()
+                productListQueryId
             );
         } catch (QueryFailedException exception) {
             log.error("Query failed while processing ProductListQueryEntity with ID {}: {}",
-                productListQueryEntity.getId(), exception.getMessage(), exception
+                productListQueryId, exception.getMessage(), exception
             );
         } catch (Exception exception) {
-            log.error("Error processing ProductListQueryEntity with ID {}", productListQueryEntity.getId(), exception);
+            log.error("Error processing ProductListQueryEntity with ID {}", productListQueryId, exception);
         } finally {
-            scheduledProductListQueryIds.remove(productListQueryEntity.getId());
+            scheduledProductListQueryIds.remove(productListQueryId);
         }
     }
 
     /**
-     * Schedules an arbitrary product code query.
+     * Schedules an arbitrary product code query for background processing if it is not already claimed.
+     *
+     * @param productCode the product code
+     */
+    private void scheduleProductCodeQuery(String productCode) {
+        if (!claimProductCode(productCode)) {
+            log.debug("Product code {} is already scheduled. Skipping.", productCode);
+            return;
+        }
+
+        log.debug("Scheduled product code {} for processing.", productCode);
+        concurrencyService.scheduleQuery(() -> runClaimedProductQuery(productCode));
+    }
+
+    /**
+     * Processes an arbitrary product code query.
      *
      * @param productCode the product code
      */
     public void runProductQuery(String productCode) {
-        synchronized (scheduledProductCodeQueries) {
-            if (scheduledProductCodeQueries.contains(productCode)) {
-                log.debug("Product code {} is already scheduled. Skipping.",
-                    productCode
-                );
-                return;
-            }
-
-            scheduledProductCodeQueries.add(productCode);
-            log.debug("Scheduled product code {} for processing.", productCode);
+        if (!claimProductCode(productCode)) {
+            log.debug("Product code {} is already scheduled. Skipping.", productCode);
+            return;
         }
 
+        runClaimedProductQuery(productCode);
+    }
+
+    private void runClaimedProductQuery(String productCode) {
         try {
             // Schedules item detail query; respects rate limiting, interval settings and checks whenever it was recently queried.
             var itemResponse = amiAmiQueryService.scheduleItemDetail(new ProductQueryRequest(productCode)).join();
@@ -307,6 +348,28 @@ public class ProductQueryScheduler extends BaseScheduler {
             log.error("Error processing product code {}", productCode, exception);
         } finally {
             scheduledProductCodeQueries.remove(productCode);
+        }
+    }
+
+    private boolean claimProductListQueryId(Long productListQueryId) {
+        synchronized (scheduledProductListQueryIds) {
+            if (scheduledProductListQueryIds.contains(productListQueryId)) {
+                return false;
+            }
+
+            scheduledProductListQueryIds.add(productListQueryId);
+            return true;
+        }
+    }
+
+    private boolean claimProductCode(String productCode) {
+        synchronized (scheduledProductCodeQueries) {
+            if (scheduledProductCodeQueries.contains(productCode)) {
+                return false;
+            }
+
+            scheduledProductCodeQueries.add(productCode);
+            return true;
         }
     }
 }
