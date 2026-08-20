@@ -297,7 +297,11 @@ public class ProxyService {
             databaseService.runInThreadTransaction(session -> {
                 for (ProxyDTO proxy : proxies) {
                     if (proxy.getTimesDeadInRow() >= proxyConfig.getMaxTimesDeadInRow()) {
+                        log.warn("Proxy {} dead at least {} times in a row, setting it to NOT_READY (from {})",
+                            proxy.getId(), proxy.getTimesDeadInRow(), proxy.getState()
+                        );
                         proxy.setState(ProxyState.NOT_READY);
+                        proxy.setTimesDeadInRow(0);
                     }
 
                     proxyRepository.findById(proxy.getId())
