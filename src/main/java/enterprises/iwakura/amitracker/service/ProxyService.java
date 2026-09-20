@@ -141,21 +141,17 @@ public class ProxyService {
             return;
         }
 
-        allProxyFetchers.stream()
-            .map(fetcher -> Map.entry(fetcher, concurrencyService.scheduleProxy(fetcher::fetch)))
-            .forEach(it -> it.getValue().whenCompleteAsync(CompletableFutureUtils.$safe((fetchedProxies, exception) -> {
-                if (exception != null) {
-                    log.error("Failed to fetch proxies from fetcher {}",
-                        it.getKey().toString(), exception
-                    );
-                    return;
-                }
+        for (var fetcher : allProxyFetchers) {
+            try {
+                var fetchedProxies = concurrencyService.scheduleProxy(fetcher::fetch).join();
 
+                log.info("Inserting {} proxies from fetcher {}", fetchedProxies.size(), fetcher);
                 proxyRepository.getOrInsertAll(fetchedProxies);
-                log.info("Fetched {} proxies from fetcher {}",
-                    fetchedProxies.size(), it.getKey().toString()
-                );
-            })));
+                log.info("Fetched {} proxies from fetcher {}", fetchedProxies.size(), fetcher);
+            } catch (Exception exception) {
+                log.error("Failed to fetch proxies from fetcher {}", fetcher, exception);
+            }
+        }
     }
 
     /**

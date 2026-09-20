@@ -2,9 +2,11 @@ package enterprises.iwakura.amitracker.database.repository;
 
 import java.net.Proxy.Type;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import org.hibernate.Session;
 
@@ -33,6 +35,8 @@ public class ProxyRepository extends AmiBaseRepository<ProxyEntity, Long> {
      * Controls how strongly high scores are preferred over low ones
      */
     private static final double SCORE_SHARPNESS = 3.0;
+
+    private static final int GET_OR_INSERT_BATCH_SIZE = 500;
 
     private final ProxyMapper proxyMapper;
 
@@ -110,13 +114,22 @@ public class ProxyRepository extends AmiBaseRepository<ProxyEntity, Long> {
                 .thenComparingInt(ProxyDTO::getPort))
             .toList();
 
-        return databaseService.runInThreadTransaction(session -> {
-            return sorted.stream().map(proxy ->
-                getByProtocolIpAndPort(proxy.getProtocol(), proxy.getIp(), proxy.getPort())
-                    .map(entity -> save(proxyMapper.update(entity, proxy)))
-                    .orElseGet(() -> save(proxyMapper.create(proxy)))
-            ).toList();
-        });
+        var result = new ArrayList<ProxyEntity>(sorted.size());
+
+        for (int i = 0; i < sorted.size(); i += GET_OR_INSERT_BATCH_SIZE) {
+            var batch = sorted.subList(i, Math.min(i + GET_OR_INSERT_BATCH_SIZE, sorted.size()));
+
+            Function<Session, List<ProxyEntity>> upsertBatch = session ->
+                batch.stream().map(proxy ->
+                    getByProtocolIpAndPort(proxy.getProtocol(), proxy.getIp(), proxy.getPort())
+                        .map(entity -> save(proxyMapper.update(entity, proxy)))
+                        .orElseGet(() -> save(proxyMapper.create(proxy)))
+                ).toList();
+
+            result.addAll(databaseService.runInThreadTransaction(upsertBatch));
+        }
+
+        return result;
     }
 
     @Override
